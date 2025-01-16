@@ -35,9 +35,8 @@ runs:
       uses: redhat-actions/openshift-tools-installer@v1.13.1
       with:
         oc: ${{ inputs.oc_version }}
-
+    
     - name: Command
-      if: steps.diff.outputs.triggered == 'true'
       shell: bash
       run: |
         # Expand for deployment steps
@@ -58,3 +57,10 @@ runs:
 
         # Run command
         oc ${{ inputs.commands }}
+        sleep 10
+        oc ${{ inputs.commands }}
+        sleep 10
+        oc ${{ inputs.commands }}
+        sleep 10
+        oc ${{ inputs.commands }}
+
