@@ -45,31 +45,6 @@ runs:
           oc login --token=$OC_TEMP_TOKEN --server=https://api.silver.devops.gov.bc.ca:6443
           oc project ${{ inputs.oc_namespace }} # Safeguard!
 
-        # # OpenShift Login
-
-        # # Allow pipefail, since we could be catching nested/piped errors
-        # set +o pipefail
-
-        # echo curl -k -X POST ${{ inputs.oc_server }}/api/v1/namespaces/${{ inputs.oc_namespace }}/serviceaccounts/pipeline/token --header "Authorization: Bearer ${{ inputs.oc_token }}" --header 'Content-Type: application/json; charset=utf-8' --data '{"spec": {"expirationSeconds": 600}}'
-        # OC_TEMP_TOKEN=$(curl -k -X POST \
-        #       ${{ inputs.oc_server }}/api/v1/namespaces/${{ inputs.oc_namespace }}/serviceaccounts/pipeline/token\
-        #       --header "Authorization: Bearer ${{ inputs.oc_token }}" \
-        #       --header 'Content-Type: application/json; charset=utf-8' \
-        #       --data '{"spec": {"expirationSeconds": 600}}' \
-        #       | jq -r '.status.token' \
-        #     )
-
-    #     # Login with temporary token
-    #     oc login --server=${{ inputs.oc_server }} --token=\
-    #       $(curl -k -X POST \
-    #           ${{ inputs.oc_server }}/api/v1/namespaces/${{ inputs.oc_namespace }}/serviceaccounts/pipeline/token\
-    #           --header "Authorization: Bearer ${{ inputs.oc_token }}" \
-    #           --header 'Content-Type: application/json; charset=utf-8' \
-    #           --data '{"spec": {"expirationSeconds": 600}}' \
-    #           | jq -r '.status.token' \
-    #         )
-    #     oc project ${{ inputs.oc_namespace }} #Safeguard!
-
-    # - name: Run Command
-    #   shell: bash
-    #   run: echo oc ${{ inputs.commands }}
+    - name: Run Command
+      shell: bash
+      run: echo oc ${{ inputs.commands }}
