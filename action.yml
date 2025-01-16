@@ -44,8 +44,15 @@ runs:
         # Allow pipefail, since we could be catching nested/piped errors
         set +o pipefail
 
-        # Login
-        oc login --token=${{ inputs.oc_token }} --server=${{ inputs.oc_server }}
+        # Login with temporary token
+        oc login --server=${{ inputs.oc_server }} --token=\
+          $(curl -k -X POST \
+              ${{ inputs.oc_server }}/api/v1/namespaces/${{ inputs.oc_namespace }}/serviceaccounts/pipeline/token\
+              --header "Authorization: Bearer ${{ secrets.oc_token }}" \
+              --header 'Content-Type: application/json; charset=utf-8' \
+              --data '{"spec": {"expirationSeconds": 600}}' \
+              | jq -r '.status.token' \
+            )
         oc project ${{ inputs.oc_namespace }} #Safeguard!
 
         # Run command
