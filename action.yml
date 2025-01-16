@@ -65,6 +65,6 @@ runs:
             )
         oc project ${{ inputs.oc_namespace }} #Safeguard!
 
-      - name: Run Command
-        shell: bash
-        run: echo oc ${{ inputs.commands }}
+    - name: Run Command
+      shell: bash
+      run: echo oc ${{ inputs.commands }}
