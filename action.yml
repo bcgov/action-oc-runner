@@ -31,7 +31,7 @@ runs:
   steps:
     - uses: redhat-actions/openshift-tools-installer@v1.13.1
       with:
-        oc: openshift-client-linux-4.14.41
+        oc: linux-4.14.41
     
     - name: OpenShift Login
       shell: bash
