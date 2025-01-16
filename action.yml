@@ -36,13 +36,13 @@ runs:
         oc: ${{ inputs.oc_version }}
 
     - name: Command
-      if: steps.diff.outputs.triggered == 'true'
       shell: bash
       run: |
+        whoami
         # Expand for deployment steps
 
-        # Allow pipefail, since we could be catching nested/piped errors
-        set +o pipefail
+        # # Allow pipefail, since we could be catching nested/piped errors
+        # set +o pipefail
 
         # # Login with temporary token
         # oc login --server=${{ inputs.oc_server }} --token=\
@@ -55,5 +55,5 @@ runs:
         #     )
         # oc project ${{ inputs.oc_namespace }} #Safeguard!
 
-        # Run command
-        oc ${{ inputs.commands }}
+        # # Run command
+        # oc ${{ inputs.commands }}
