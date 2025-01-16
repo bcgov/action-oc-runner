@@ -36,13 +36,23 @@ runs:
       with:
         oc: ${{ inputs.oc_version }}
     
-    - name: Command
+    - name: OpenShift Login
       shell: bash
       run: |
-        # Expand for deployment steps
+        # Expand login
 
         # Allow pipefail, since we could be catching nested/piped errors
         set +o pipefail
+
+        echo curl -k -X POST ${{ inputs.oc_server }}/api/v1/namespaces/${{ inputs.oc_namespace }}/serviceaccounts/pipeline/token --header "Authorization: Bearer ${{ inputs.oc_token }}" --header 'Content-Type: application/json; charset=utf-8' --data '{"spec": {"expirationSeconds": 600}}' | jq -r '.status.token'
+        curl -k -X POST ${{ inputs.oc_server }}/api/v1/namespaces/${{ inputs.oc_namespace }}/serviceaccounts/pipeline/token --header "Authorization: Bearer ${{ inputs.oc_token }}" --header 'Content-Type: application/json; charset=utf-8' --data '{"spec": {"expirationSeconds": 600}}' | jq -r '.status.token'
+        $(curl -k -X POST \
+              ${{ inputs.oc_server }}/api/v1/namespaces/${{ inputs.oc_namespace }}/serviceaccounts/pipeline/token\
+              --header "Authorization: Bearer ${{ inputs.oc_token }}" \
+              --header 'Content-Type: application/json; charset=utf-8' \
+              --data '{"spec": {"expirationSeconds": 600}}' \
+              | jq -r '.status.token' \
+            )
 
         # Login with temporary token
         oc login --server=${{ inputs.oc_server }} --token=\
@@ -55,12 +65,7 @@ runs:
             )
         oc project ${{ inputs.oc_namespace }} #Safeguard!
 
-        # Run command
-        oc ${{ inputs.commands }}
-        sleep 10
-        oc ${{ inputs.commands }}
-        sleep 10
-        oc ${{ inputs.commands }}
-        sleep 10
-        oc ${{ inputs.commands }}
-
+      - name: Run Command
+        shell: bash
+        run: |
+          oc ${{ inputs.commands }}
