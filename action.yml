@@ -10,10 +10,10 @@ inputs:
     description: Command to run, will be prefaced by 'oc'; e.g. whoami
     required: true
   oc_namespace:
-    description: OpenShift namespace (e.g. abc123-dev)
+    description: OpenShift namespace; e.g. abc123-dev
     required: true
   oc_server:
-    description: OpenShift server (e.g. https://api.silver.devops.gov.bc.ca:6443)
+    description: OpenShift server; e.g. https://api.silver.devops.gov.bc.ca:6443
     required: true
   oc_token:
     description: OpenShift access token
@@ -29,24 +29,28 @@ permissions: {}
 runs:
   using: composite
   steps:
-    # Override OpenShift version, if specified
-    - name: Install CLI tools
-      uses: redhat-actions/openshift-tools-installer@v1
+    - uses: redhat-actions/openshift-tools-installer@v1.13.1
       with:
         oc: ${{ inputs.oc_version }}
-
-    - name: Command
-      if: steps.diff.outputs.triggered == 'true'
-      shell: bash
+    
+    - shell: bash
       run: |
-        # Expand for deployment steps
+          # OpenShift login
+          oc login --server=${{ inputs.oc_server }} --token=$( curl -ksX POST \
+            ${{ inputs.oc_server }}/api/v1/namespaces/${{ inputs.oc_namespace }}/serviceaccounts/pipeline/token \
+            --header "Authorization: Bearer ${{ inputs.oc_token }}" \
+            --header "Content-Type: application/json; charset=utf-8" \
+            --data '{"spec": {"expirationSeconds": 600}}' \
+            | jq -r '.status.token' \
+          )
+          
+          # Verify namespace
+          if [ "$( oc project -q )" != "${{ inputs.oc_namespace }}" ]; then
+            echo "Project and token do not match!"
+            exit 1
+          fi
 
-        # Allow pipefail, since we could be catching nested/piped errors
-        set +o pipefail
-
-        # Login
-        oc login --token=${{ inputs.oc_token }} --server=${{ inputs.oc_server }}
-        oc project ${{ inputs.oc_namespace }} #Safeguard!
-
-        # Run command
+    - shell: bash
+      run: |
+        # Run command(s)
         oc ${{ inputs.commands }}
