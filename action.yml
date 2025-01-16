@@ -22,7 +22,8 @@ inputs:
   ### Usually a bad idea / not recommended
   oc_version:
     description: Override or non-default oc version; e.g. 4.13
-    default: 'openshift-client-linux-4.14.41'
+    # default: 'openshift-client-linux-4.14.41'
+    default: '4.14.41'
 
 permissions: {}
 
@@ -33,28 +34,27 @@ runs:
     - name: Install CLI tools
       uses: redhat-actions/openshift-tools-installer@v1.13.1
       with:
-        oc: 'openshift-client-linux-4.14.41'
-        # oc: ${{ inputs.oc_version }}
+        oc: ${{ inputs.oc_version }}
 
     - name: Command
+      if: steps.diff.outputs.triggered == 'true'
       shell: bash
       run: |
-        whoami
         # Expand for deployment steps
 
-        # # Allow pipefail, since we could be catching nested/piped errors
-        # set +o pipefail
+        # Allow pipefail, since we could be catching nested/piped errors
+        set +o pipefail
 
-        # # Login with temporary token
-        # oc login --server=${{ inputs.oc_server }} --token=\
-        #   $(curl -k -X POST \
-        #       ${{ inputs.oc_server }}/api/v1/namespaces/${{ inputs.oc_namespace }}/serviceaccounts/pipeline/token\
-        #       --header "Authorization: Bearer ${{ inputs.oc_token }}" \
-        #       --header 'Content-Type: application/json; charset=utf-8' \
-        #       --data '{"spec": {"expirationSeconds": 600}}' \
-        #       | jq -r '.status.token' \
-        #     )
-        # oc project ${{ inputs.oc_namespace }} #Safeguard!
+        # Login with temporary token
+        oc login --server=${{ inputs.oc_server }} --token=\
+          $(curl -k -X POST \
+              ${{ inputs.oc_server }}/api/v1/namespaces/${{ inputs.oc_namespace }}/serviceaccounts/pipeline/token\
+              --header "Authorization: Bearer ${{ inputs.oc_token }}" \
+              --header 'Content-Type: application/json; charset=utf-8' \
+              --data '{"spec": {"expirationSeconds": 600}}' \
+              | jq -r '.status.token' \
+            )
+        oc project ${{ inputs.oc_namespace }} #Safeguard!
 
-        # # Run command
-        # oc ${{ inputs.commands }}
+        # Run command
+        oc ${{ inputs.commands }}
