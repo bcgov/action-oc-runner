@@ -40,12 +40,12 @@ runs:
           OC_TEMP_TOKEN=$(curl -k -X POST \
             https://api.silver.devops.gov.bc.ca:6443/api/v1/namespaces/${{ inputs.oc_namespace }}/serviceaccounts/pipeline/token \
             --header "Authorization: Bearer ${{ inputs.oc_token }}" \
-            --header 'Content-Type: application/json; charset=utf-8' \
+            --header "Content-Type: application/json; charset=utf-8" \
             --data '{"spec": {"expirationSeconds": 600}}' \
             | jq -r '.status.token' \
           )
 
-          oc login --token=$OC_TEMP_TOKEN --server=https://api.silver.devops.gov.bc.ca:6443
+          oc login --server=https://api.silver.devops.gov.bc.ca:6443 --token=$OC_TEMP_TOKEN
           oc project ${{ inputs.oc_namespace }} # Safeguard!
 
     - name: Run Command
