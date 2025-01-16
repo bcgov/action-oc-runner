@@ -29,10 +29,9 @@ permissions: {}
 runs:
   using: composite
   steps:
-    - name: Install CLI tools
-      uses: redhat-actions/openshift-tools-installer@v1.13.1
+    - uses: redhat-actions/openshift-tools-installer@v1.13.1
       with:
-        oc: ${{ inputs.oc_version }}
+        oc: openshift-client-linux-4.14.41
     
     - name: OpenShift Login
       shell: bash
@@ -45,4 +44,4 @@ runs:
 
     - name: Run Command
       shell: bash
-      run: echo oc ${{ inputs.commands }}
+      run: oc ${{ inputs.commands }}
