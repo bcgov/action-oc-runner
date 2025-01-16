@@ -31,9 +31,10 @@ runs:
   steps:
     # Override OpenShift version, if specified
     - name: Install CLI tools
-      uses: redhat-actions/openshift-tools-installer@v1
+      uses: redhat-actions/openshift-tools-installer@v1.13.1
       with:
-        oc: ${{ inputs.oc_version }}
+        oc: '4.14.41'
+        # oc: ${{ inputs.oc_version }}
 
     - name: Command
       shell: bash
