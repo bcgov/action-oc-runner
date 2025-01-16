@@ -29,9 +29,14 @@ permissions: {}
 runs:
   using: composite
   steps:
-    - uses: redhat-actions/openshift-tools-installer@v1.13.1
-      with:
-        oc: ${{ inputs.oc_version }}
+    - env:
+        OC: https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-${{ inputs.oc_version }}/openshift-client-linux.tar.gz
+      shell: bash
+      working-directory: /usr/local/bin/
+      run: |
+        # Install CLI tool (retry, resume)
+        (wget ${{ env.OC }} -qcO - | tar -xzvf - oc)|| !!
+        oc version
     
     - shell: bash
       run: |
