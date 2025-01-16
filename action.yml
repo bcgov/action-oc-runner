@@ -43,6 +43,12 @@ runs:
             --data '{"spec": {"expirationSeconds": 600}}' \
             | jq -r '.status.token' \
           )
+          
+          # Verify namespace
+          if [ "$( oc project -q )" != "${{ inputs.oc_namespace }}" ]; then
+            echo "Project and token do not match!"
+            exit 1
+          fi
 
     - shell: bash
       run: |
