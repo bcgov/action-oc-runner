@@ -21,8 +21,8 @@ inputs:
 
   ### Usually a bad idea / not recommended
   oc_version:
-    description: Override or non-default oc version; e.g. 4.13
-    default: '4.14.41'
+    description: Override or non-default oc version; e.g. 4.14
+    default: '4.14'
 
 permissions: {}
 
