@@ -35,6 +35,9 @@ Action for running oc commands. Version can be updated in one spot when the plat
     # Command to run, generally oc commands
     commands: oc whoami
 
+    # Bash array to diff for triggering; omit to always run
+    triggers: ('frontend/' 'backend/' 'database/')
+
 
     ### Usually a bad idea / not recommended
 
@@ -59,9 +62,30 @@ whoami:
         oc_token: ${{ secrets.OC_TOKEN }}
 ```
 
+# Example, Run Multiple Commands with a Trigger
+
+Run multiple commands if a trigger is fired.
+
+```yaml
+whoami:
+  name: Who Am I?
+  runs-on: ubuntu-latest
+  steps:
+    - uses: bcgov/action-oc-runner@X.Y.Z
+      with:
+        oc_namespace: ${{ secrets.OC_NAMESPACE }}
+        oc_server: ${{ secrets.OC_SERVER }}
+        oc_token: ${{ secrets.OC_TOKEN }}
+        triggers: ('frontend/' 'backend/' 'database/')
+        commands: |
+          oc whoami
+          oc version
+          oc whofarted
+```
+
 # Example, Login only
 
-Run a single command.
+Login only.
 
 ```yaml
 whoami:

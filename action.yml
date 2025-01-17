@@ -15,6 +15,8 @@ inputs:
   oc_token:
     description: OpenShift access token
     required: true
+  triggers:
+    description: Paths used to trigger this action; e.g. ('./backend/' './frontend/)
 
   ### Typical / recommended
   commands:
@@ -30,7 +32,14 @@ permissions: {}
 runs:
   using: composite
   steps:
-    - env:
+    # Send triggers to diff action
+    - id: diff
+      uses: bcgov-nr/action-diff-triggers@v0.2.0
+      with:
+        triggers: ${{ inputs.triggers }}
+
+    - if: steps.diff.outputs.triggered == 'true'
+      env:
         OC: https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-${{ inputs.oc_version }}/openshift-client-linux.tar.gz
       shell: bash
       working-directory: /usr/local/bin/
@@ -39,7 +48,8 @@ runs:
         (wget ${{ env.OC }} -qcO - | tar -xzvf - oc)|| !!
         oc version
     
-    - shell: bash
+    - if: steps.diff.outputs.triggered == 'true'
+      shell: bash
       run: |
           # OpenShift login
           oc login --server=${{ inputs.oc_server }} --token=$( curl -ksX POST \
@@ -56,7 +66,8 @@ runs:
             exit 1
           fi
 
-    - shell: bash
+    - if: steps.diff.outputs.triggered == 'true'
+      shell: bash
       run: |
         # Run command(s)
         ${{ inputs.commands }}
