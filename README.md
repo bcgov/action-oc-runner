@@ -57,7 +57,7 @@ whoami:
         oc_namespace: ${{ secrets.OC_NAMESPACE }}
         oc_server: ${{ secrets.OC_SERVER }}
         oc_token: ${{ secrets.OC_TOKEN }}
-        oc_version: '3'
+        oc_version: '3.11'
 ```
 
 # Example, Login only
