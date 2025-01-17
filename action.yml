@@ -22,7 +22,7 @@ inputs:
 
   ### Usually a bad idea / not recommended
   oc_version:
-    description: Override or non-default oc version; e.g. 4.14
+    description: Override oc version, >= 4.0; e.g. 4.14
     default: '4.14'
 
 permissions: {}

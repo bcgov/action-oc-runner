@@ -38,7 +38,7 @@ Action for running oc commands. Version can be updated in one spot when the plat
 
     ### Usually a bad idea / not recommended
 
-    # Override GitHub default oc version
+    # Override GitHub default oc version >= 4.0
     oc_version: "4.14"
 ```
 
@@ -57,7 +57,6 @@ whoami:
         oc_namespace: ${{ secrets.OC_NAMESPACE }}
         oc_server: ${{ secrets.OC_SERVER }}
         oc_token: ${{ secrets.OC_TOKEN }}
-        oc_version: '3.11'
 ```
 
 # Example, Login only
@@ -91,6 +90,7 @@ whoami:
         oc_namespace: ${{ secrets.OC_NAMESPACE }}
         oc_server: ${{ secrets.OC_SERVER }}
         oc_token: ${{ secrets.OC_TOKEN }}
+        oc_version: '4.1'
 ```
 
 
