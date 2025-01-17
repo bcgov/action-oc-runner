@@ -10,9 +10,9 @@ concurrency:
 permissions: {}
 
 jobs:
-  test:
-    name: Test
-    runs-on: ubuntu-24.04
+  whoami:
+    name: Who Am I?
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: ./
@@ -22,9 +22,22 @@ jobs:
           oc_server: ${{ secrets.oc_server }}
           oc_token: ${{ secrets.oc_token }}
 
+  legacy:
+    name: Legacy Binary
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        with:
+          commands: oc version
+          oc_namespace: ${{ secrets.oc_namespace }}
+          oc_server: ${{ secrets.oc_server }}
+          oc_token: ${{ secrets.oc_token }}
+          oc_version: '3'
+
   results:
     name: PR Results
-    needs: [test]
+    needs: [whoami, legacy]
     if: always()
     runs-on: ubuntu-24.04
     steps:
