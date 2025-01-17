@@ -53,10 +53,11 @@ whoami:
   steps:
     - uses: bcgov/action-oc-runner@X.Y.Z
       with:
-        commands: whoami
+        commands: oc whoami
         oc_namespace: ${{ secrets.OC_NAMESPACE }}
         oc_server: ${{ secrets.OC_SERVER }}
         oc_token: ${{ secrets.OC_TOKEN }}
+        oc_version: '3'
 ```
 
 # Example, Login only
@@ -70,6 +71,23 @@ whoami:
   steps:
     - uses: bcgov/action-oc-runner@X.Y.Z
       with:
+        oc_namespace: ${{ secrets.OC_NAMESPACE }}
+        oc_server: ${{ secrets.OC_SERVER }}
+        oc_token: ${{ secrets.OC_TOKEN }}
+```
+
+# Example, Legacy binary
+
+Run a single command.
+
+```yaml
+whoami:
+  name: Login
+  runs-on: ubuntu-latest
+  steps:
+    - uses: bcgov/action-oc-runner@X.Y.Z
+      with:
+        commands: oc version
         oc_namespace: ${{ secrets.OC_NAMESPACE }}
         oc_server: ${{ secrets.OC_SERVER }}
         oc_token: ${{ secrets.OC_TOKEN }}
