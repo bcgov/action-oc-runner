@@ -21,6 +21,7 @@ jobs:
           oc_namespace: ${{ secrets.oc_namespace }}
           oc_server: ${{ secrets.oc_server }}
           oc_token: ${{ secrets.oc_token }}
+          triggers: ('./github/' 'action.yml')
 
   legacy:
     name: Legacy Binary
@@ -34,6 +35,7 @@ jobs:
           oc_server: ${{ secrets.oc_server }}
           oc_token: ${{ secrets.oc_token }}
           oc_version: '4.1'
+          triggers: ('./github/' 'action.yml')
 
   results:
     name: PR Results
