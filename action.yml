@@ -38,7 +38,7 @@ runs:
       with:
         triggers: ${{ inputs.triggers }}
 
-    - if: steps.diff.outputs.triggered != 'true'
+    - if: steps.diff.outputs.triggered == 'true'
       env:
         OC: https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-${{ inputs.oc_version }}/openshift-client-linux.tar.gz
       shell: bash
@@ -48,7 +48,7 @@ runs:
         (wget ${{ env.OC }} -qcO - | tar -xzvf - oc)|| !!
         oc version
     
-    - if: steps.diff.outputs.triggered != 'true'
+    - if: steps.diff.outputs.triggered == 'true'
       shell: bash
       run: |
           # OpenShift login
@@ -66,7 +66,7 @@ runs:
             exit 1
           fi
 
-    - if: steps.diff.outputs.triggered != 'true'
+    - if: steps.diff.outputs.triggered == 'true'
       shell: bash
       run: |
         # Run command(s)
