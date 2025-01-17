@@ -8,7 +8,7 @@
 [issues]: https://docs.github.com/en/issues/tracking-your-work-with-issues/creating-an-issue
 [pull requests]: https://docs.github.com/en/desktop/contributing-and-collaborating-using-github-desktop/working-with-your-remote-repository-on-github-or-github-enterprise/creating-an-issue-or-pull-request
 
-# OpenShift CLI (oc) Runner
+# OpenShift CLI (oc) Login and Runner
 
 Action for running oc commands. Version can be updated in one spot when the platform team updates OpenShift.
 
@@ -19,9 +19,6 @@ Action for running oc commands. Version can be updated in one spot when the plat
   with:
     ### Required
     
-    # Command to run, will be prefaced by 'oc'
-    commands: whoami
-
     # OpenShift project/namespace
     oc_namespace: abc123-dev
 
@@ -32,13 +29,20 @@ Action for running oc commands. Version can be updated in one spot when the plat
     # Usually available as a secret in your project/namespace
     oc_token: ${{ secrets.OC_TOKEN }}
 
+
+    ### Typical / recommended
+
+    # Command to run, generally oc commands
+    commands: oc whoami
+
+
     ### Usually a bad idea / not recommended
 
-    # Override GitHub default oc version
+    # Override GitHub default oc version >= 4.0
     oc_version: "4.14"
 ```
 
-# Example
+# Example, Single Command with Login
 
 Run a single command.
 
@@ -49,11 +53,46 @@ whoami:
   steps:
     - uses: bcgov/action-oc-runner@X.Y.Z
       with:
-        commands: whoami
+        commands: oc whoami
         oc_namespace: ${{ secrets.OC_NAMESPACE }}
         oc_server: ${{ secrets.OC_SERVER }}
         oc_token: ${{ secrets.OC_TOKEN }}
 ```
+
+# Example, Login only
+
+Run a single command.
+
+```yaml
+whoami:
+  name: Login
+  runs-on: ubuntu-latest
+  steps:
+    - uses: bcgov/action-oc-runner@X.Y.Z
+      with:
+        oc_namespace: ${{ secrets.OC_NAMESPACE }}
+        oc_server: ${{ secrets.OC_SERVER }}
+        oc_token: ${{ secrets.OC_TOKEN }}
+```
+
+# Example, Legacy binary
+
+Run a single command.
+
+```yaml
+whoami:
+  name: Login
+  runs-on: ubuntu-latest
+  steps:
+    - uses: bcgov/action-oc-runner@X.Y.Z
+      with:
+        commands: oc version
+        oc_namespace: ${{ secrets.OC_NAMESPACE }}
+        oc_server: ${{ secrets.OC_SERVER }}
+        oc_token: ${{ secrets.OC_TOKEN }}
+        oc_version: '4.1'
+```
+
 
 # Feedback
 
