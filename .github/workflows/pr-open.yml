@@ -12,7 +12,7 @@ permissions: {}
 jobs:
   whoami:
     name: Who Am I?
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - id: whoami
@@ -36,7 +36,7 @@ jobs:
 
   legacy:
     name: Legacy Binary
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: ./
@@ -52,7 +52,7 @@ jobs:
     name: PR Results
     needs: [whoami, legacy]
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - if: contains(needs.*.result, 'failure')||contains(needs.*.result, 'canceled')
         run: echo "At least one job has failed." && exit 1

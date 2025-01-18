@@ -52,7 +52,7 @@ Run a single command.
 ```yaml
 whoami:
   name: Who Am I?
-  runs-on: ubuntu-latest
+  runs-on: ubuntu-24.04
   steps:
     - uses: bcgov/action-oc-runner@X.Y.Z
       with:
@@ -69,7 +69,7 @@ Run multiple commands if a trigger is fired.
 ```yaml
 whoami:
   name: Who Am I?
-  runs-on: ubuntu-latest
+  runs-on: ubuntu-24.04
   steps:
     - uses: bcgov/action-oc-runner@X.Y.Z
       with:
@@ -90,7 +90,7 @@ Login only.
 ```yaml
 whoami:
   name: Login
-  runs-on: ubuntu-latest
+  runs-on: ubuntu-24.04
   steps:
     - uses: bcgov/action-oc-runner@X.Y.Z
       with:
@@ -106,7 +106,7 @@ Run a single command.
 ```yaml
 whoami:
   name: Login
-  runs-on: ubuntu-latest
+  runs-on: ubuntu-24.04
   steps:
     - uses: bcgov/action-oc-runner@X.Y.Z
       with:
