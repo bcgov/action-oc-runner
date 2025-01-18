@@ -25,16 +25,13 @@ jobs:
           triggers: ('.github/' 'action.yml' '.gitignore' 'LICENSE' 'README.md' 'renovate.json')
 
       - env:
-          outputs: ${{ toJSON(steps.whoami.outputs) }}
-        if: steps.whoami.outputs.triggered == 'true'
+          outputs: ${{ toJSON(steps.whoami) }}
         run: |
           echo "Outputs: ${{ env.outputs }}"
-
-      - if: steps.whoami.outputs.triggered != 'true'
-        run: |
-          echo "Error!  Verify outputs."
-          echo "Outputs: ${{ steps.whoami }}"
-          exit 1
+          if [ "${{ steps.whoami.outputs.triggered }}" != "true" ]; then
+            echo "Error!  Verify outputs."
+            exit 1
+          fi
 
   legacy:
     name: Legacy Binary
