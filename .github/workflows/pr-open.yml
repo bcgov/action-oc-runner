@@ -22,7 +22,7 @@ jobs:
           oc_namespace: ${{ secrets.oc_namespace }}
           oc_server: ${{ secrets.oc_server }}
           oc_token: ${{ secrets.oc_token }}
-          triggers: ('./github/' 'action.yml')
+          triggers: ('./.github/' 'action.yml')
 
       - if: steps.whoami.outputs.triggered == 'true'
         run: |
