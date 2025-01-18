@@ -27,6 +27,7 @@ jobs:
       - env:
           outputs: ${{ toJSON(steps.whoami) }}
         run: |
+          # Verify outputs
           echo "Outputs: ${{ env.outputs }}"
           if [ "${{ steps.whoami.outputs.triggered }}" != "true" ]; then
             echo "Error!  Verify outputs."
