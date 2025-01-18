@@ -15,13 +15,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: ./
+      - id: whoami
+        uses: ./
         with:
           commands: oc whoami
           oc_namespace: ${{ secrets.oc_namespace }}
           oc_server: ${{ secrets.oc_server }}
           oc_token: ${{ secrets.oc_token }}
           triggers: ('./github/' 'action.yml')
+
+      - if: whoami.outputs.triggered == 'true'
+        run: |
+          echo "Outputs: ${{ steps.whoami }}"
+
+      - if: whoami.outputs.triggered != 'true'
+        run: |
+          echo "Error!  Verify outputs."
+          echo "Outputs: ${{ steps.whoami }}"
+          exit 1
 
   legacy:
     name: Legacy Binary
