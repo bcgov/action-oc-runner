@@ -27,6 +27,11 @@ inputs:
     description: Override oc version, >= 4.0; e.g. 4.14
     default: '4.14'
 
+outputs:
+  triggered:
+    description: Whether the action was triggered
+    value: ${{ steps.diff.outputs.triggered }}
+
 permissions: {}
 
 runs:
