@@ -22,11 +22,13 @@ jobs:
           oc_namespace: ${{ secrets.oc_namespace }}
           oc_server: ${{ secrets.oc_server }}
           oc_token: ${{ secrets.oc_token }}
-          triggers: ('.github/' 'action.yml')
+          triggers: ('.github/' 'action.yml' '.gitignore' 'LICENSE' 'README.md' 'renovate.json')
 
-      - if: steps.whoami.outputs.triggered == 'true'
+      - env:
+          outputs: ${{ fromJSON(steps.whoami.outputs) }}
+        if: steps.whoami.outputs.triggered == 'true'
         run: |
-          echo "Outputs: ${{ fromJSON(steps.whoami.outputs) }}"
+          echo "Outputs: ${{ env.outputs }}"
 
       - if: steps.whoami.outputs.triggered != 'true'
         run: |
