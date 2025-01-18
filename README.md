@@ -1,7 +1,7 @@
 <!-- Badges -->
-[![Issues](https://img.shields.io/github/issues/bcgov-nr/action-conditional-container-builder)](/../../issues)
-[![Pull Requests](https://img.shields.io/github/issues-pr/bcgov-nr/action-conditional-container-builder)](/../../pulls)
-[![MIT License](https://img.shields.io/github/license/bcgov-nr/action-conditional-container-builder.svg)](/LICENSE)
+[![Issues](https://img.shields.io/github/issues/bcgov/action-conditional-container-builder)](/../../issues)
+[![Pull Requests](https://img.shields.io/github/issues-pr/bcgov/action-conditional-container-builder)](/../../pulls)
+[![MIT License](https://img.shields.io/github/license/bcgov/action-conditional-container-builder.svg)](/LICENSE)
 [![Lifecycle](https://img.shields.io/badge/Lifecycle-Experimental-339999)](https://github.com/bcgov/repomountie/blob/master/doc/lifecycle-badges.md)
 
 <!-- Reference-Style link -->
@@ -52,7 +52,7 @@ Run a single command.
 ```yaml
 whoami:
   name: Who Am I?
-  runs-on: ubuntu-latest
+  runs-on: ubuntu-24.04
   steps:
     - uses: bcgov/action-oc-runner@X.Y.Z
       with:
@@ -69,7 +69,7 @@ Run multiple commands if a trigger is fired.
 ```yaml
 whoami:
   name: Who Am I?
-  runs-on: ubuntu-latest
+  runs-on: ubuntu-24.04
   steps:
     - uses: bcgov/action-oc-runner@X.Y.Z
       with:
@@ -90,7 +90,7 @@ Login only.
 ```yaml
 whoami:
   name: Login
-  runs-on: ubuntu-latest
+  runs-on: ubuntu-24.04
   steps:
     - uses: bcgov/action-oc-runner@X.Y.Z
       with:
@@ -106,7 +106,7 @@ Run a single command.
 ```yaml
 whoami:
   name: Login
-  runs-on: ubuntu-latest
+  runs-on: ubuntu-24.04
   steps:
     - uses: bcgov/action-oc-runner@X.Y.Z
       with:

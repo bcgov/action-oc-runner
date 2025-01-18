@@ -12,20 +12,31 @@ permissions: {}
 jobs:
   whoami:
     name: Who Am I?
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - uses: ./
+      - id: whoami
+        uses: ./
         with:
           commands: oc whoami
           oc_namespace: ${{ secrets.oc_namespace }}
           oc_server: ${{ secrets.oc_server }}
           oc_token: ${{ secrets.oc_token }}
-          triggers: ('./github/' 'action.yml')
+          triggers: ('.github/' 'action.yml' '.gitignore' 'LICENSE' 'README.md' 'renovate.json')
+
+      - env:
+          outputs: ${{ toJSON(steps.whoami.outputs) }}
+        run: |
+          # Verify outputs
+          echo "Outputs: ${{ env.outputs }}"
+          if [ "${{ steps.whoami.outputs.triggered }}" != "true" ]; then
+            echo "Error!  Verify outputs."
+            exit 1
+          fi
 
   legacy:
     name: Legacy Binary
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: ./

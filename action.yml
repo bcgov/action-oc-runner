@@ -39,7 +39,7 @@ runs:
   steps:
     # Send triggers to diff action
     - id: diff
-      uses: bcgov-nr/action-diff-triggers@v0.2.0
+      uses: bcgov/action-diff-triggers@v0.2.0
       with:
         triggers: ${{ inputs.triggers }}
 
