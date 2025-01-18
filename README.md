@@ -117,6 +117,29 @@ whoami:
         oc_version: '4.1'
 ```
 
+# Output
+
+The action will return a boolean (true|false) of whether a this action's triggers have fired. It can be useful for follow-up tasks, like running tests or cronjobs.
+
+```yaml
+jobs:
+  command:
+    runs-on: ubuntu-latest
+    outputs:
+      triggered: ${{ steps.meaningful_step_name.outputs.triggered }}
+    steps:
+      - id: meaningful_step_name
+        uses: bcgov/action-oc-runner@vX.Y.Z
+   ...
+
+  result:
+    runs-on: ubuntu-latest
+    needs: [command]
+    steps:
+      - needs: [command]
+        run: |
+          echo "Triggered = ${{ needs.command.outputs.triggered }}
+```
 
 # Feedback
 
