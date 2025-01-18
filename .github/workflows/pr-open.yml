@@ -25,7 +25,7 @@ jobs:
           triggers: ('.github/' 'action.yml' '.gitignore' 'LICENSE' 'README.md' 'renovate.json')
 
       - env:
-          outputs: ${{ fromJSON(steps.whoami.outputs) }}
+          outputs: ${{ toJSON(steps.whoami.outputs) }}
         if: steps.whoami.outputs.triggered == 'true'
         run: |
           echo "Outputs: ${{ env.outputs }}"
