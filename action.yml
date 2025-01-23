@@ -45,6 +45,7 @@ runs:
       uses: bcgov/action-diff-triggers@v0.2.0
       with:
         triggers: ${{ inputs.triggers }}
+        diff_branch: ${{ inputs.diff_branch }}
 
     - if: steps.diff.outputs.triggered == 'true'
       env:
