@@ -41,6 +41,9 @@ Action for running oc commands. Version can be updated in one spot when the plat
 
     ### Usually a bad idea / not recommended
 
+    # Overrides the default branch to diff against
+    diff_branch: ${{ github.event.repository.default_branch }}
+
     # Override GitHub default oc version >= 4.0
     oc_version: "4.14"
 ```
