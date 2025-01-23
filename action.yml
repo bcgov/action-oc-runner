@@ -23,6 +23,9 @@ inputs:
     description: Command to run, generally oc commands; e.g. oc whoami
 
   ### Usually a bad idea / not recommended
+  diff_branch:
+    description: Branch to diff against
+    default: ${{ github.event.repository.default_branch }}
   oc_version:
     description: Override oc version, >= 4.0; e.g. 4.14
     default: '4.14'
@@ -42,6 +45,7 @@ runs:
       uses: bcgov/action-diff-triggers@v0.2.0
       with:
         triggers: ${{ inputs.triggers }}
+        diff_branch: ${{ inputs.diff_branch }}
 
     - if: steps.diff.outputs.triggered == 'true'
       env:
