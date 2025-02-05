@@ -35,11 +35,17 @@ Action for running oc commands. Version can be updated in one spot when the plat
     # Command to run, generally oc commands
     commands: oc whoami
 
+    # Cronjob to run and report on
+    cronjob: repo-name-cronjob-etc
+
     # Bash array to diff for triggering; omit to always run
     triggers: ('frontend/' 'backend/' 'database/')
 
 
     ### Usually a bad idea / not recommended
+
+    # Timeout for cronjob
+    cronjob_timeout: 5m
 
     # Overrides the default branch to diff against
     diff_branch: ${{ github.event.repository.default_branch }}
@@ -59,19 +65,19 @@ whoami:
   steps:
     - uses: bcgov/action-oc-runner@X.Y.Z
       with:
-        commands: oc whoami
         oc_namespace: ${{ secrets.OC_NAMESPACE }}
         oc_server: ${{ secrets.OC_SERVER }}
         oc_token: ${{ secrets.OC_TOKEN }}
+        commands: oc whoami
 ```
 
-# Example, Run Multiple Commands with a Trigger
+# Example, Run Multiple Commands Conditionally with a Trigger
 
-Run multiple commands if a trigger is fired.
+Run multiple commands if any trigger files/paths have changes.
 
 ```yaml
-whoami:
-  name: Who Am I?
+whoareyou:
+  name: Who Are You?
   runs-on: ubuntu-24.04
   steps:
     - uses: bcgov/action-oc-runner@X.Y.Z
@@ -91,8 +97,8 @@ whoami:
 Login only.
 
 ```yaml
-whoami:
-  name: Login
+login:
+  name: Login Only
   runs-on: ubuntu-24.04
   steps:
     - uses: bcgov/action-oc-runner@X.Y.Z
@@ -102,22 +108,21 @@ whoami:
         oc_token: ${{ secrets.OC_TOKEN }}
 ```
 
-# Example, Legacy binary
+# Example, Run and Report on Cronjob
 
-Run a single command.
+Provide the name of a cronjob object.  It will be run date-stamped and return a success or failure on completion.
 
 ```yaml
-whoami:
-  name: Login
+cronjob:
+  name: Run and Report on Cronjob
   runs-on: ubuntu-24.04
   steps:
     - uses: bcgov/action-oc-runner@X.Y.Z
       with:
-        commands: oc version
         oc_namespace: ${{ secrets.OC_NAMESPACE }}
         oc_server: ${{ secrets.OC_SERVER }}
         oc_token: ${{ secrets.OC_TOKEN }}
-        oc_version: '4.1'
+        cronjob: repo-name-cronjob-etc
 ```
 
 # Output
