@@ -10,7 +10,9 @@
 
 # OpenShift CLI (oc) Login and Runner
 
-Action for running oc commands. Version can be updated in one spot when the platform team updates OpenShift.
+Action for running oc commands. Intended for use with the BC Government's OpenShift cluster.  We will do our best to keep the default oc runner version lined up with whatever the platform team currently has deployed to production.
+
+Provide as few as zero commands to login only.  There is a separate parameter for cronjobs, with the ability to report success or failure.
 
 # Usage
 
@@ -54,13 +56,13 @@ Action for running oc commands. Version can be updated in one spot when the plat
     oc_version: "4.14"
 ```
 
-# Example, Single Command with Login
+# Example: Login only
 
-Run a single command.
+Login only.
 
 ```yaml
-whoami:
-  name: Who Am I?
+login:
+  name: Login Only
   runs-on: ubuntu-24.04
   steps:
     - uses: bcgov/action-oc-runner@X.Y.Z
@@ -68,12 +70,11 @@ whoami:
         oc_namespace: ${{ secrets.OC_NAMESPACE }}
         oc_server: ${{ secrets.OC_SERVER }}
         oc_token: ${{ secrets.OC_TOKEN }}
-        commands: oc whoami
 ```
 
-# Example, Run Multiple Commands Conditionally with a Trigger
+# Example: Run Multiple Commands Conditionally (w/ Triggers)
 
-Run multiple commands if any trigger files/paths have changes.
+Run multiple commands if any trigger files/paths have changes.  Triggers are optional.
 
 ```yaml
 whoareyou:
@@ -92,25 +93,9 @@ whoareyou:
           oc whofarted
 ```
 
-# Example, Login only
+# Example: Run and Report on Cronjob (w/ Triggers)
 
-Login only.
-
-```yaml
-login:
-  name: Login Only
-  runs-on: ubuntu-24.04
-  steps:
-    - uses: bcgov/action-oc-runner@X.Y.Z
-      with:
-        oc_namespace: ${{ secrets.OC_NAMESPACE }}
-        oc_server: ${{ secrets.OC_SERVER }}
-        oc_token: ${{ secrets.OC_TOKEN }}
-```
-
-# Example, Run and Report on Cronjob
-
-Provide the name of a cronjob object.  It will be run date-stamped and return a success or failure on completion.
+Provide the name of a cronjob object.  It will be run timestamped and return a success or failure on completion.  Triggers are optional.
 
 ```yaml
 cronjob:
@@ -122,6 +107,7 @@ cronjob:
         oc_namespace: ${{ secrets.OC_NAMESPACE }}
         oc_server: ${{ secrets.OC_SERVER }}
         oc_token: ${{ secrets.OC_TOKEN }}
+        triggers: ('cronjobland/' 'misc/' 'whatever/')
         cronjob: repo-name-cronjob-etc
 ```
 
