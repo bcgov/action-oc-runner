@@ -21,8 +21,12 @@ inputs:
   ### Typical / recommended
   commands:
     description: Command to run, generally oc commands; e.g. oc whoami
+  cronjob:
+    description: Cronjob to run, watch and report on
 
   ### Usually a bad idea / not recommended
+  cronjob_timeout:
+    value: 5m
   diff_branch:
     description: Branch to diff against
     default: ${{ github.event.repository.default_branch }}
@@ -75,8 +79,25 @@ runs:
             exit 1
           fi
 
-    - if: steps.diff.outputs.triggered == 'true'
+    - if: steps.diff.outputs.triggered == 'true' && inputs.commands
       shell: bash
       run: |
         # Run command(s)
         ${{ inputs.commands }}
+
+    - if: steps.diff.outputs.triggered == 'true' && inputs.cronjob
+      shell: bash
+      run: |
+        # Run cronjob
+
+        # Create job
+        JOB_NAME=${{ inputs.cronjob }}--$(date +"%Y-%m-%d--%H-%M-%S")
+        oc create job ${JOB_NAME} --from=cronjob/${{ inputs.cronjob }}
+
+        # Follow
+        oc wait --for=condition=ready pod --selector=job-name=${JOB_NAME} --timeout=${{ inputs.cronjob_timeout }}
+        oc logs -l job-name=${JOB_NAME} --tail=50 --follow
+
+        # Verify successful completion
+        oc wait --for jsonpath='{.status.phase}'=Succeeded pod --selector=job-name=${JOB_NAME} --timeout=1m
+        echo "Job successful!"
