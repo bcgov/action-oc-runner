@@ -23,7 +23,7 @@ objects:
         app: ${REPO}-${ZONE}
         cronjob: ${REPO}-${ZONE}
     metadata:
-      name: ${REPO}
+      name: ${REPO}-${ZONE}-${APP}
     spec:
       # Every Feb 31 at midnight - so never!
       schedule: "0 0 31 2 0"
