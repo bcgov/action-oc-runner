@@ -25,6 +25,8 @@ inputs:
     description: Cronjob to run, watch and report on
 
   ### Usually a bad idea / not recommended
+  cronjob_logs:
+    default: false
   cronjob_timeout:
     default: 5m
   diff_branch:
@@ -93,3 +95,7 @@ runs:
         oc create job ${JOB_NAME} --from=cronjob/${{ inputs.cronjob }}
         oc wait --for jsonpath='{.status.phase}'=Succeeded pod --selector=job-name=${JOB_NAME} --timeout=${{ inputs.cronjob_timeout }}
         echo "Job successful!"
+
+        if [ "${{ inputs.cronjob_logs }}" != "false" ]; then
+          oc logs --selector=job-name=${JOB_NAME}
+        fi
