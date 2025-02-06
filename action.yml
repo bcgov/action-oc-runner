@@ -26,7 +26,7 @@ inputs:
 
   ### Usually a bad idea / not recommended
   cronjob_timeout:
-    value: 5m
+    default: 5m
   diff_branch:
     description: Branch to diff against
     default: ${{ github.event.repository.default_branch }}
