@@ -65,7 +65,7 @@ jobs:
 
       - uses: ./
         with:
-          cronjob: ${{ github.repository }}-${{ github.event.number }}-cronjob
+          cronjob: ${{ github.event.repository.name }}-${{ github.event.number }}-cronjob
           oc_namespace: ${{ secrets.oc_namespace }}
           oc_server: ${{ secrets.oc_server }}
           oc_token: ${{ secrets.oc_token }}
