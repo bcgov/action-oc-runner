@@ -67,8 +67,8 @@ login:
   steps:
     - uses: bcgov/action-oc-runner@X.Y.Z
       with:
-        oc_namespace: ${{ secrets.OC_NAMESPACE }}
-        oc_server: ${{ secrets.OC_SERVER }}
+        oc_namespace: ${{ vars.oc_namespace }}
+        oc_server: ${{ vars.oc_server }}
         oc_token: ${{ secrets.OC_TOKEN }}
 ```
 
@@ -83,8 +83,8 @@ whoareyou:
   steps:
     - uses: bcgov/action-oc-runner@X.Y.Z
       with:
-        oc_namespace: ${{ secrets.OC_NAMESPACE }}
-        oc_server: ${{ secrets.OC_SERVER }}
+        oc_namespace: ${{ vars.oc_namespace }}
+        oc_server: ${{ vars.oc_server }}
         oc_token: ${{ secrets.OC_TOKEN }}
         triggers: ('frontend/' 'backend/' 'database/')
         commands: |
@@ -104,8 +104,8 @@ cronjob:
   steps:
     - uses: bcgov/action-oc-runner@X.Y.Z
       with:
-        oc_namespace: ${{ secrets.OC_NAMESPACE }}
-        oc_server: ${{ secrets.OC_SERVER }}
+        oc_namespace: ${{ vars.oc_namespace }}
+        oc_server: ${{ vars.oc_server }}
         oc_token: ${{ secrets.OC_TOKEN }}
         triggers: ('cronjobland/' 'misc/' 'whatever/')
         cronjob: repo-name-cronjob-etc
