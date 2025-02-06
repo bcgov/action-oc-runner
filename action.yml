@@ -88,18 +88,8 @@ runs:
     - if: steps.diff.outputs.triggered == 'true' && inputs.cronjob
       shell: bash
       run: |
-        # Run cronjob
-
-        # Create job
+        # Run Cronjob and report on completion
         JOB_NAME=${{ inputs.cronjob }}--$(date +"%Y-%m-%d--%H-%M-%S")
         oc create job ${JOB_NAME} --from=cronjob/${{ inputs.cronjob }}
-
-        # Follow (catches job that completed too quickly)
-        sleep 3
-        # oc wait --for=condition=ready pod --selector=job-name=${JOB_NAME} --timeout=1m || \
-        #   oc wait --for jsonpath='{.status.phase}'=Succeeded pod --selector=job-name=${JOB_NAME} --timeout=1m
-        oc logs -l job-name=${JOB_NAME} --tail=100 --follow
-
-        # Verify successful or error out
         oc wait --for jsonpath='{.status.phase}'=Succeeded pod --selector=job-name=${JOB_NAME} --timeout=${{ inputs.cronjob_timeout }}
         echo "Job successful!"
