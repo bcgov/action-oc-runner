@@ -11,7 +11,7 @@ permissions: {}
 
 jobs:
   whoami:
-    name: Who Am I?
+    name: Test Command
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -35,7 +35,7 @@ jobs:
           fi
 
   legacy:
-    name: Legacy Binary
+    name: Test Legacy Binary
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -48,11 +48,10 @@ jobs:
           oc_version: '4.1'
           triggers: ('./github/' 'action.yml')
 
-  cronjob:
-    name: CronJob
+  cronjob-deploy:
+    name: Deploy CronJob
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
       - name: Cronjob
         uses: bcgov/action-deployer-openshift@v3.1.0
         with:
@@ -63,6 +62,11 @@ jobs:
           parameters: -p ZONE=${{ github.event.number }}
           # triggers: ('./github/' 'action.yml')
 
+  cronjob-test:
+    name: Test CronJob
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
       - uses: ./
         with:
           cronjob: ${{ github.event.repository.name }}-${{ github.event.number }}-cronjob
@@ -73,7 +77,7 @@ jobs:
 
   results:
     name: PR Results
-    needs: [whoami, legacy, cronjob]
+    needs: [whoami, legacy, cronjob-deploy, cronjob-test]
     if: always()
     runs-on: ubuntu-24.04
     steps:
