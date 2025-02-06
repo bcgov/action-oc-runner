@@ -95,9 +95,9 @@ runs:
         oc create job ${JOB_NAME} --from=cronjob/${{ inputs.cronjob }}
 
         # Follow
-        oc wait --for=condition=ready pod --selector=job-name=${JOB_NAME} --timeout=${{ inputs.cronjob_timeout }}
-        oc logs -l job-name=${JOB_NAME} --tail=50 --follow
+        oc wait --for=condition=ready pod --selector=job-name=${JOB_NAME} --timeout=1m
+        oc logs -l job-name=${JOB_NAME} --tail=100 --follow
 
-        # Verify successful completion
-        oc wait --for jsonpath='{.status.phase}'=Succeeded pod --selector=job-name=${JOB_NAME} --timeout=1m
+        # Verify successful or error out
+        oc wait --for jsonpath='{.status.phase}'=Succeeded pod --selector=job-name=${JOB_NAME} --timeout=${{ inputs.cronjob_timeout }}
         echo "Job successful!"
