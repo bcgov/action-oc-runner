@@ -48,9 +48,32 @@ jobs:
           oc_version: '4.1'
           triggers: ('./github/' 'action.yml')
 
+  cronjob:
+    name: CronJob
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cronjob
+        uses: bcgov/action-deployer-openshift@v3.0.1
+        with:
+          file: test/openshift.cronjob.yml
+          oc_namespace: ${{ secrets.oc_namespace }}
+          oc_server: ${{ secrets.oc_server }}
+          oc_token: ${{ secrets.oc_token }}
+          parameters: -p ZONE=${{ inputs.target }}
+          # triggers: ('./github/' 'action.yml')
+
+      - uses: ./
+        with:
+          cronjob: ${{ github.repository }}-${{ github.event.number }}-cronjob
+          oc_namespace: ${{ secrets.oc_namespace }}
+          oc_server: ${{ secrets.oc_server }}
+          oc_token: ${{ secrets.oc_token }}
+          # triggers: ('./github/' 'action.yml')
+
   results:
     name: PR Results
-    needs: [whoami, legacy]
+    needs: [whoami, legacy, cronjob]
     if: always()
     runs-on: ubuntu-24.04
     steps:
