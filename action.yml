@@ -96,6 +96,9 @@ runs:
         oc wait --for jsonpath='{.status.phase}'=Succeeded pod --selector=job-name=${JOB_NAME} --timeout=${{ inputs.cronjob_timeout }}
         echo "Job successful!"
 
+    - if: always() && steps.diff.outputs.triggered == 'true' && inputs.cronjob
+      shell: bash
+      run: |
         if [ "${{ inputs.cronjob_logs }}" != "false" ]; then
           echo -e "\n\n--- Logs --- \n\n"
           oc logs --selector=job-name=${JOB_NAME}
