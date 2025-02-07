@@ -52,8 +52,8 @@ jobs:
     name: Deploy and Test CronJob
     runs-on: ubuntu-24.04
     steps:
-      - name: Cronjob
       - uses: actions/checkout@v4
+      - name: Cronjob
         uses: bcgov/action-deployer-openshift@v3.1.0
         with:
           file: test/openshift.cronjob.yml
