@@ -97,5 +97,6 @@ runs:
         echo "Job successful!"
 
         if [ "${{ inputs.cronjob_logs }}" != "false" ]; then
+          echo -e "\n\n--- Logs --- \n\n"
           oc logs --selector=job-name=${JOB_NAME}
         fi

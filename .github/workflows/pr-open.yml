@@ -22,7 +22,6 @@ jobs:
           oc_namespace: ${{ vars.oc_namespace }}
           oc_server: ${{ vars.oc_server }}
           oc_token: ${{ secrets.oc_token }}
-          triggers: ('.github/' 'action.yml' '.gitignore' 'LICENSE' 'README.md' 'renovate.json')
 
       - env:
           outputs: ${{ toJSON(steps.whoami.outputs) }}
@@ -46,22 +45,22 @@ jobs:
           oc_server: ${{ vars.oc_server }}
           oc_token: ${{ secrets.oc_token }}
           oc_version: '4.1'
-          triggers: ('./github/' 'action.yml')
+          triggers: ('.github/' 'action.yml')
 
   cronjob:
-    name: Deploy and Test CronJob
+    name: Test CronJob
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: Cronjob
         uses: bcgov/action-deployer-openshift@v3.1.0
         with:
-          file: test/openshift.cronjob.yml
+          file: cronjob/openshift.deploy.yml
           oc_namespace: ${{ vars.oc_namespace }}
           oc_server: ${{ vars.oc_server }}
           oc_token: ${{ secrets.oc_token }}
           parameters: -p ZONE=${{ github.event.number }}
-          triggers: ('./github/' 'action.yml')
+          triggers: ('.github/' 'action.yml' 'cronjob/')
       
       - uses: ./
         with:
@@ -70,7 +69,7 @@ jobs:
           oc_namespace: ${{ vars.oc_namespace }}
           oc_server: ${{ vars.oc_server }}
           oc_token: ${{ secrets.oc_token }}
-          # triggers: ('./github/' 'action.yml')
+          triggers: ('.github/' 'action.yml' 'cronjob/')
 
   results:
     name: PR Results
