@@ -11,7 +11,7 @@ permissions: {}
 
 jobs:
   whoami:
-    name: Who Am I?
+    name: Test Command
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -19,10 +19,9 @@ jobs:
         uses: ./
         with:
           commands: oc whoami
-          oc_namespace: ${{ secrets.oc_namespace }}
-          oc_server: ${{ secrets.oc_server }}
+          oc_namespace: ${{ vars.oc_namespace }}
+          oc_server: ${{ vars.oc_server }}
           oc_token: ${{ secrets.oc_token }}
-          triggers: ('.github/' 'action.yml' '.gitignore' 'LICENSE' 'README.md' 'renovate.json')
 
       - env:
           outputs: ${{ toJSON(steps.whoami.outputs) }}
@@ -35,22 +34,46 @@ jobs:
           fi
 
   legacy:
-    name: Legacy Binary
+    name: Test Legacy Binary
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: ./
         with:
           commands: oc version
-          oc_namespace: ${{ secrets.oc_namespace }}
-          oc_server: ${{ secrets.oc_server }}
+          oc_namespace: ${{ vars.oc_namespace }}
+          oc_server: ${{ vars.oc_server }}
           oc_token: ${{ secrets.oc_token }}
           oc_version: '4.1'
-          triggers: ('./github/' 'action.yml')
+          triggers: ('action.yml')
+
+  cronjob:
+    name: Test CronJob
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cronjob
+        uses: bcgov/action-deployer-openshift@v3.1.0
+        with:
+          file: cronjob/openshift.deploy.yml
+          oc_namespace: ${{ vars.oc_namespace }}
+          oc_server: ${{ vars.oc_server }}
+          oc_token: ${{ secrets.oc_token }}
+          parameters: -p ZONE=${{ github.event.number }}
+          triggers: ('.github/' 'action.yml' 'cronjob/')
+      
+      - uses: ./
+        with:
+          cronjob: ${{ github.event.repository.name }}-${{ github.event.number }}-cronjob
+          cronjob_logs: true
+          oc_namespace: ${{ vars.oc_namespace }}
+          oc_server: ${{ vars.oc_server }}
+          oc_token: ${{ secrets.oc_token }}
+          triggers: ('.github/' 'action.yml' 'cronjob/')
 
   results:
     name: PR Results
-    needs: [whoami, legacy]
+    needs: [whoami, legacy, cronjob]
     if: always()
     runs-on: ubuntu-24.04
     steps:

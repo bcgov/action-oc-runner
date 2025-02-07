@@ -1,0 +1,51 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+parameters:
+  ### Required - do not hard code
+  - name: ZONE
+    description: Deployment zone, e.g. pr-###, test or prod
+    required: true
+
+  ### Recommended - suggest hard coding
+  - name: APP
+    description: Application/component name
+    value: cronjob
+  - name: REPO
+    description: Repository name
+    value: action-oc-runner
+
+objects:
+  - kind: CronJob
+    apiVersion: batch/v1
+    metadata:
+      name: ${REPO}-${ZONE}-${APP}
+      labels:
+        app: ${REPO}-${ZONE}
+        cronjob: ${REPO}-${ZONE}
+    metadata:
+      name: ${REPO}-${ZONE}-${APP}
+    spec:
+      # Every Feb 31 at midnight - so never!
+      schedule: "0 0 31 2 0"
+      startingDeadlineSeconds: 60
+      concurrencyPolicy: "Replace"
+      successfulJobsHistoryLimit: 5
+      failedJobsHistoryLimit: 1
+      jobTemplate:
+        spec:
+          backoffLimit: 0
+          template:
+            metadata:
+              labels:
+                app: ${REPO}-${ZONE}
+                cronjob: ${REPO}-${ZONE}
+            spec:
+              containers:
+                - name: ${REPO}-${ZONE}-${APP}
+                  image: busybox:1.28
+                  imagePullPolicy: IfNotPresent
+                  command:
+                    - /bin/sh
+                    - -c
+                    - date; echo Hello from the Kubernetes cluster
+              restartPolicy: OnFailure
