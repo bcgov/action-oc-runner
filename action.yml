@@ -35,6 +35,9 @@ inputs:
   oc_version:
     description: Override oc version, >= 4.0; e.g. 4.14
     default: '4.14'
+  repository:
+    description: Optionally, specify a different repo to clone
+    default: ${{ github.repository }}
 
 outputs:
   triggered:
@@ -81,6 +84,11 @@ runs:
             exit 1
           fi
 
+    - if: steps.diff.outputs.triggered == 'true'
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ inputs.repository }}
+
     - if: steps.diff.outputs.triggered == 'true' && inputs.commands
       shell: bash
       run: |
@@ -96,6 +104,7 @@ runs:
         oc wait --for jsonpath='{.status.phase}'=Succeeded pod --selector=job-name=${JOB_NAME} --timeout=${{ inputs.cronjob_timeout }}
         echo "Job successful!"
 
+    # Provide logs if requested, even on fail
     - if: always() && steps.diff.outputs.triggered == 'true' && inputs.cronjob
       shell: bash
       run: |
@@ -103,3 +112,8 @@ runs:
           echo -e "\n\n--- Logs --- \n\n"
           oc logs --selector=job-name=${JOB_NAME}
         fi
+
+    # Action repo needs to be present for cleanup/tests
+    - if: steps.diff.outputs.triggered == 'true' && github.repository != inputs.repository
+      name: Checkout local repo to make sure action.yml is present
+      uses: actions/checkout@v4

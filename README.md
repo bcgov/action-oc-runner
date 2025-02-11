@@ -54,6 +54,10 @@ Provide as few as zero commands to login only.  There is a separate parameter fo
 
     # Override GitHub default oc version >= 4.0
     oc_version: "4.14"
+
+    # Repository to clone and process
+    # Useful for consuming other repos, defaults to the current one
+    repository: ${{ github.repository }}
 ```
 
 # Example: Login only
