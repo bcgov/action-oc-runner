@@ -99,7 +99,7 @@ runs:
       shell: bash
       run: |
         # Run Cronjob and report on completion
-        echo JOB_NAME=${{ inputs.cronjob }}--$(date +"%Y-%m-%d--%H-%M-%S")
+        JOB_NAME=${{ inputs.cronjob }}--$(date +"%Y-%m-%d--%H-%M-%S")
         echo "JOB_NAME=${JOB_NAME}" >> $GITHUB_ENV
 
         oc create job ${JOB_NAME} --from=cronjob/${{ inputs.cronjob }}
