@@ -46,7 +46,10 @@ Provide as few as zero commands to login only.  There is a separate parameter fo
 
     ### Usually a bad idea / not recommended
 
-    # Timeout for cronjob
+    # Number of cronjob log lines to tail; use -1 for all
+    cronjob_tail: 0
+
+    # Timeout for cronjob to run; e.g. 5m
     cronjob_timeout: 5m
 
     # Overrides the default branch to diff against
