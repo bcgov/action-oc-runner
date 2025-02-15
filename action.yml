@@ -113,7 +113,7 @@ runs:
       run: |
         if [ "${{ inputs.cronjob_logs }}" != "false" ]; then
           echo -e "\n\n--- Logs ---\n\n"
-          oc logs --selector=job-name=${{ env.JOB_NAME }}
+          oc logs --selector=job-name=${JOB_NAME}
           echo -e "\n\n---\n\n"
         fi
 
