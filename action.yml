@@ -99,10 +99,12 @@ runs:
       shell: bash
       run: |
         # Run Cronjob and report on completion
-        echo JOB_NAME=${{ inputs.cronjob }}--$(date +"%Y-%m-%d--%H-%M-%S") >> $GITHUB_ENV
+        echo JOB_NAME=${{ inputs.cronjob }}--$(date +"%Y-%m-%d--%H-%M-%S")
+        echo "JOB_NAME=${JOB_NAME}" >> $GITHUB_ENV
 
-        oc create job ${{ env.JOB_NAME }} --from=cronjob/${{ inputs.cronjob }}
-        oc wait --for jsonpath='{.status.phase}'=Succeeded pod --selector=job-name=${{ env.JOB_NAME }} --timeout=${{ inputs.cronjob_timeout }}
+        oc create job ${JOB_NAME} --from=cronjob/${{ inputs.cronjob }}
+        oc wait --for jsonpath='{.status.phase}'=Succeeded pod --selector=job-name=${JOB_NAME} \
+           --timeout=${{ inputs.cronjob_timeout }}
         echo "Job successful!"
 
     # Provide logs if requested, even on fail
