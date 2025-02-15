@@ -25,9 +25,11 @@ inputs:
     description: Cronjob to run, watch and report on
 
   ### Usually a bad idea / not recommended
-  cronjob_logs:
-    default: false
+  cronjob_tail:
+    description: Number of cronjob log lines to tail; use -1 for all
+    default: 0
   cronjob_timeout:
+    description: Timeout for cronjob to run; e.g. 5m
     default: 5m
   diff_branch:
     description: Branch to diff against
@@ -113,7 +115,7 @@ runs:
       run: |
         if [ "${{ inputs.cronjob_logs }}" != "false" ]; then
           echo -e "\n\n--- Logs ---\n\n"
-          oc logs --selector=job-name=${JOB_NAME}
+          oc logs --tail=${{ inputs.cronjob_tail }} --selector=job-name=${JOB_NAME}
           echo -e "\n\n---\n\n"
         fi
 
