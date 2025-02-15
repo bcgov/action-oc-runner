@@ -26,9 +26,10 @@ inputs:
 
   ### Usually a bad idea / not recommended
   cronjob_tail:
-    description: Number of log lines to tail; use -1 for all
+    description: Number of cronjob log lines to tail; use -1 for all
     default: 0
   cronjob_timeout:
+    description: Timeout for cronjob to run; e.g. 5m
     default: 5m
   diff_branch:
     description: Branch to diff against
