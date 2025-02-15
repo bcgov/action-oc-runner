@@ -112,8 +112,9 @@ runs:
       shell: bash
       run: |
         if [ "${{ inputs.cronjob_logs }}" != "false" ]; then
-          echo -e "\n\n--- Logs --- \n\n"
+          echo -e "\n\n--- Logs ---\n\n"
           oc logs --selector=job-name=${{ env.JOB_NAME }}
+          echo -e "\n\n---\n\n"
         fi
 
     # Action repo needs to be present for cleanup/tests
