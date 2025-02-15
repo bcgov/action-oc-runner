@@ -100,8 +100,11 @@ runs:
       run: |
         # Run Cronjob and report on completion
         JOB_NAME=${{ inputs.cronjob }}--$(date +"%Y-%m-%d--%H-%M-%S")
+        echo "JOB_NAME=${JOB_NAME}" >> $GITHUB_ENV
+
         oc create job ${JOB_NAME} --from=cronjob/${{ inputs.cronjob }}
-        oc wait --for jsonpath='{.status.phase}'=Succeeded pod --selector=job-name=${JOB_NAME} --timeout=${{ inputs.cronjob_timeout }}
+        oc wait --for jsonpath='{.status.phase}'=Succeeded pod --selector=job-name=${JOB_NAME} \
+           --timeout=${{ inputs.cronjob_timeout }}
         echo "Job successful!"
 
     # Provide logs if requested, even on fail
@@ -109,8 +112,9 @@ runs:
       shell: bash
       run: |
         if [ "${{ inputs.cronjob_logs }}" != "false" ]; then
-          echo -e "\n\n--- Logs --- \n\n"
+          echo -e "\n\n--- Logs ---\n\n"
           oc logs --selector=job-name=${JOB_NAME}
+          echo -e "\n\n---\n\n"
         fi
 
     # Action repo needs to be present for cleanup/tests
