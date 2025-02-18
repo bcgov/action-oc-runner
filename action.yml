@@ -48,9 +48,6 @@ outputs:
 
 permissions: {}
 
-env:
-  OC_VERSION_DEFAULT: '4.14'
-
 runs:
   using: composite
   steps:
@@ -61,7 +58,9 @@ runs:
         triggers: ${{ inputs.triggers }}
         diff_branch: ${{ inputs.diff_branch }}
 
-    - shell: bash
+    - env:
+        OC_VERSION_DEFAULT: '4.14'
+      shell: bash
       run: |
         if [ ${{ inputs.oc_version }} ]; then
           echo "OC_VERSION=${{ inputs.oc_version }}" >> $GITHUB_ENV
