@@ -37,9 +37,6 @@ inputs:
   oc_version:
     description: Override oc version, >= 4.0; e.g. 4.14
     default: ''
-  oc_version_default: 
-    description: Default oc version; used when oc_version is empty
-    default: 4.14
   repository:
     description: Optionally, specify a different repo to clone
     default: ${{ github.repository }}
@@ -63,7 +60,7 @@ runs:
 
     - if: steps.diff.outputs.triggered == 'true'
       env:
-        OC: ${{ inputs.oc_version || inputs.oc_version_default }}
+        OC: ${{ inputs.oc_version || '4.14' }}
       shell: bash
       working-directory: /usr/local/bin/
       run: |
