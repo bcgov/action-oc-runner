@@ -36,7 +36,7 @@ inputs:
     default: ${{ github.event.repository.default_branch }}
   oc_version:
     description: Override oc version, >= 4.0; e.g. 4.14
-    default: '4.14'
+    default: ''
   repository:
     description: Optionally, specify a different repo to clone
     default: ${{ github.repository }}
@@ -47,6 +47,9 @@ outputs:
     value: ${{ steps.diff.outputs.triggered }}
 
 permissions: {}
+
+env:
+  oc_version_default: '4.14'
 
 runs:
   using: composite
@@ -60,7 +63,7 @@ runs:
 
     - if: steps.diff.outputs.triggered == 'true'
       env:
-        OC: https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-${{ inputs.oc_version }}/openshift-client-linux.tar.gz
+        OC: https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-${{ inputs.oc_version || env.oc_version_default }}/openshift-client-linux.tar.gz
       shell: bash
       working-directory: /usr/local/bin/
       run: |
