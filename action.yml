@@ -61,7 +61,7 @@ runs:
         triggers: ${{ inputs.triggers }}
         diff_branch: ${{ inputs.diff_branch }}
 
-    - id: oc_version
+    - shell: bash
       run: |
         echo "OC_VERSION=${{ inputs.oc_version || env.oc_version_default }}" >> $GITHUB_ENV
 
