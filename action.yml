@@ -50,7 +50,8 @@ permissions: {}
 
 runs:
   env:
-    OC_VERSION_DEFAULT: '4.14'  using: composite
+    OC_VERSION_DEFAULT: '4.14'
+  using: composite
   steps:
     # Send triggers to diff action
     - id: diff
