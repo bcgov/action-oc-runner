@@ -49,7 +49,7 @@ outputs:
 permissions: {}
 
 env:
-  oc_version_default: '4.14'
+  OC_VERSION_DEFAULT: '4.14'
 
 runs:
   using: composite
@@ -63,7 +63,11 @@ runs:
 
     - shell: bash
       run: |
-        echo "OC_VERSION=${{ inputs.oc_version || env.oc_version_default }}" >> $GITHUB_ENV
+        if [ ${{ inputs.oc_version }} ]; then
+          echo "OC_VERSION=${{ inputs.oc_version }}" >> $GITHUB_ENV
+        else
+          echo "OC_VERSION=${{ env.OC_VERSION_DEFAULT }}" >> $GITHUB_ENV
+        fi
 
     - if: steps.diff.outputs.triggered == 'true'
       env:
