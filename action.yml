@@ -69,15 +69,16 @@ runs:
     #     fi
 
     - if: steps.diff.outputs.triggered == 'true'
-      env:
-        OC_VERSION_DEFAULT: '4.14'
-        OC_VERSION_TEST: ${{ inputs.oc_version || '4.14' }}
-        OC: https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-${{ inputs.oc_version || '4.14' }}/openshift-client-linux.tar.gz
+      # env:
+      #   OC_VERSION_DEFAULT: '4.14'
+        # OC_VERSION_TEST: ${{ inputs.oc_version || '4.14' }}
+        # OC: https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-${{ inputs.oc_version || '4.14' }}/openshift-client-linux.tar.gz
       shell: bash
       working-directory: /usr/local/bin/
       run: |
         # Install CLI tool (retry, resume)
-        (wget ${{ env.OC }} -qcO - | tar -xzvf - oc)|| !!
+        LINK="https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-${{ inputs.oc_version || '4.14' }}/openshift-client-linux.tar.gz"
+        (wget "${LINK}" -qcO - | tar -xzvf - oc)|| !!
         oc version
     
     - if: steps.diff.outputs.triggered == 'true'
