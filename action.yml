@@ -61,9 +61,13 @@ runs:
         triggers: ${{ inputs.triggers }}
         diff_branch: ${{ inputs.diff_branch }}
 
+    - id: oc_version
+      run: |
+        echo "OC_VERSION=${{ inputs.oc_version || env.oc_version_default }}" >> $GITHUB_ENV
+
     - if: steps.diff.outputs.triggered == 'true'
       env:
-        OC: https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-${{ inputs.oc_version || env.oc_version_default }}/openshift-client-linux.tar.gz
+        OC: https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-${{ env.OC_VERSION }}/openshift-client-linux.tar.gz
       shell: bash
       working-directory: /usr/local/bin/
       run: |
