@@ -37,6 +37,9 @@ inputs:
   oc_version:
     description: Override oc version, >= 4.0; e.g. 4.14
     default: ''
+  oc_version_default: 
+    description: Default oc version; used when oc_version is empty
+    default: 4.14
   repository:
     description: Optionally, specify a different repo to clone
     default: ${{ github.repository }}
@@ -49,8 +52,6 @@ outputs:
 permissions: {}
 
 runs:
-  env:
-    OC_VERSION_DEFAULT: '4.14'
   using: composite
   steps:
     # Send triggers to diff action
@@ -60,26 +61,15 @@ runs:
         triggers: ${{ inputs.triggers }}
         diff_branch: ${{ inputs.diff_branch }}
 
-    # - env:
-    #     OC_VERSION_DEFAULT: '4.14'
-    #   shell: bash
-    #   run: |
-    #     if [ ${{ inputs.oc_version }} ]; then
-    #       echo "OC_VERSION=${{ inputs.oc_version }}" >> $GITHUB_ENV
-    #     else
-    #       echo "OC_VERSION=${{ env.OC_VERSION_DEFAULT }}" >> $GITHUB_ENV
-    #     fi
-
     - if: steps.diff.outputs.triggered == 'true'
-      # env:
-      #   OC_VERSION_DEFAULT: '4.14'
-        # OC: https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-${{ inputs.oc_version || '4.14' }}/openshift-client-linux.tar.gz
+      env:
+        OC: ${{ inputs.oc_version || inputs.oc_version_default }}
       shell: bash
       working-directory: /usr/local/bin/
       run: |
         # Install CLI tool (retry, resume)
-        LINK="https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-${{ inputs.oc_version || env.OC_VERSION_DEFAULT }}/openshift-client-linux.tar.gz"
-        (wget "${LINK}" -qcO - | tar -xzvf - oc)|| !!
+        URL="https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-${OC}/openshift-client-linux.tar.gz"
+        (wget "${URL}" -qcO - | tar -xzvf - oc)|| !!
         oc version
     
     - if: steps.diff.outputs.triggered == 'true'
