@@ -97,7 +97,6 @@ whoareyou:
         commands: |
           oc whoami
           oc version
-          oc whofarted
 ```
 
 # Example: Run and Report on Cronjob (w/ Triggers)
