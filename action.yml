@@ -9,12 +9,15 @@ inputs:
   oc_namespace:
     description: OpenShift namespace; e.g. abc123-dev
     required: true
+    pattern: '^[a-z0-9]{6}-(dev|test|prod|tools)$'
   oc_server:
     description: OpenShift server; e.g. https://api.silver.devops.gov.bc.ca:6443
     required: true
+    pattern: '^https:\/\/.*:6443$'
   oc_token:
     description: OpenShift access token
     required: true
+    minLength: 32
   triggers:
     description: Paths used to trigger this action; e.g. ('./backend/' './frontend/)
 
@@ -31,12 +34,14 @@ inputs:
   cronjob_timeout:
     description: Timeout for cronjob to run; e.g. 5m
     default: 5m
+    pattern: '^[0-9]+[mhs]$'
   diff_branch:
     description: Branch to diff against
     default: ${{ github.event.repository.default_branch }}
   oc_version:
     description: Override oc version, >= 4.0; e.g. 4.14
     default: ''
+    pattern: '^4\.[0-9]+$'
   repository:
     description: Optionally, specify a different repo to clone
     default: ${{ github.repository }}
@@ -62,12 +67,12 @@ runs:
       env:
         OC: ${{ inputs.oc_version || '4.14' }}
       shell: bash
-      working-directory: /usr/local/bin/
+      working-directory: /usr/local/bin
       run: |
         # Install CLI Tool and Login
         if ! command -v oc &> /dev/null; then
           URL="https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-${OC}/openshift-client-linux.tar.gz"
-          (wget "${URL}" -qcO - | tar -xzvf - oc) || !!
+          (wget "${URL}" -qcO - | tar -xzvf - oc) || !! || { echo "Failed to download oc client"; exit 1; }
         fi
 
         # OpenShift login
@@ -77,7 +82,7 @@ runs:
           --header "Content-Type: application/json; charset=utf-8" \
           --data '{"spec": {"expirationSeconds": 600}}' \
           | jq -r '.status.token' \
-        )
+        ) || { echo "Failed to obtain service account token"; exit 1; }
 
         # Verify namespace
         if [ "$( oc project -q )" != "${{ inputs.oc_namespace }}" ]; then
@@ -99,13 +104,11 @@ runs:
     - if: steps.diff.outputs.triggered == 'true' && inputs.cronjob
       shell: bash
       run: |
-        # Run Cronjob and report on completion
         JOB_NAME=${{ inputs.cronjob }}--$(date +"%Y-%m-%d--%H-%M-%S")
         echo "JOB_NAME=${JOB_NAME}" >> $GITHUB_ENV
 
         oc create job ${JOB_NAME} --from=cronjob/${{ inputs.cronjob }}
-        oc wait --for jsonpath='{.status.phase}'=Succeeded pod --selector=job-name=${JOB_NAME} \
-           --timeout=${{ inputs.cronjob_timeout }}
+        oc wait --for=condition=complete job/${JOB_NAME} --timeout=${{ inputs.cronjob_timeout }}
         echo "Job successful!"
 
     # Provide logs if requested, even on fail
