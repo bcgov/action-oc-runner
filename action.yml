@@ -108,7 +108,8 @@ runs:
         echo "JOB_NAME=${JOB_NAME}" >> $GITHUB_ENV
 
         oc create job ${JOB_NAME} --from=cronjob/${{ inputs.cronjob }}
-        oc wait --for=condition=complete job/${JOB_NAME} --timeout=${{ inputs.cronjob_timeout }}
+        oc wait --for jsonpath='{.status.phase}'=Succeeded pod --selector=job-name=${JOB_NAME} \
+           --timeout=${{ inputs.cronjob_timeout }}
         echo "Job successful!"
 
     # Provide logs if requested, even on fail
