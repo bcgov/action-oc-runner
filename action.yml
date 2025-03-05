@@ -64,28 +64,26 @@ runs:
       shell: bash
       working-directory: /usr/local/bin/
       run: |
-        # Install CLI tool (retry, resume)
-        URL="https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-${OC}/openshift-client-linux.tar.gz"
-        (wget "${URL}" -qcO - | tar -xzvf - oc)|| !!
-        oc version
-    
-    - if: steps.diff.outputs.triggered == 'true'
-      shell: bash
-      run: |
-          # OpenShift login
-          oc login --server=${{ inputs.oc_server }} --token=$( curl -ksX POST \
-            ${{ inputs.oc_server }}/api/v1/namespaces/${{ inputs.oc_namespace }}/serviceaccounts/pipeline/token \
-            --header "Authorization: Bearer ${{ inputs.oc_token }}" \
-            --header "Content-Type: application/json; charset=utf-8" \
-            --data '{"spec": {"expirationSeconds": 600}}' \
-            | jq -r '.status.token' \
-          )
-          
-          # Verify namespace
-          if [ "$( oc project -q )" != "${{ inputs.oc_namespace }}" ]; then
-            echo "Project and token do not match!"
-            exit 1
-          fi
+        # Install CLI Tool and Login
+        if ! command -v oc &> /dev/null; then
+          URL="https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-${OC}/openshift-client-linux.tar.gz"
+          (wget "${URL}" -qcO - | tar -xzvf - oc) || !!
+        fi
+
+        # OpenShift login
+        oc login --server=${{ inputs.oc_server }} --token=$( curl -ksX POST \
+          ${{ inputs.oc_server }}/api/v1/namespaces/${{ inputs.oc_namespace }}/serviceaccounts/pipeline/token \
+          --header "Authorization: Bearer ${{ inputs.oc_token }}" \
+          --header "Content-Type: application/json; charset=utf-8" \
+          --data '{"spec": {"expirationSeconds": 600}}' \
+          | jq -r '.status.token' \
+        )
+
+        # Verify namespace
+        if [ "$( oc project -q )" != "${{ inputs.oc_namespace }}" ]; then
+          echo "Project and token do not match!"
+          exit 1
+        fi
 
     - if: steps.diff.outputs.triggered == 'true'
       uses: actions/checkout@v4
