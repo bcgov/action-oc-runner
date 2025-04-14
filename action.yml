@@ -31,10 +31,6 @@ inputs:
   cronjob_tail:
     description: Number of cronjob log lines to tail; use -1 for all
     default: 0
-  cronjob_timeout:
-    description: Timeout for cronjob to run; e.g. 5m
-    default: 10m
-    pattern: '^[0-9]+[mhs]$'
   diff_branch:
     description: Branch to diff against
     default: ${{ github.event.repository.default_branch }}
@@ -45,6 +41,10 @@ inputs:
   repository:
     description: Optionally, specify a different repo to clone
     default: ${{ github.repository }}
+  timeout:
+    description: Timeout for commands or cronjob; e.g. 10m
+    default: 10m
+    pattern: '^[0-9]+[mhs]$'
 
 outputs:
   triggered:
@@ -96,13 +96,14 @@ runs:
         repository: ${{ inputs.repository }}
 
     - if: steps.diff.outputs.triggered == 'true' && inputs.commands
-      timeout-minutes: ${{ inputs.cron_timeout }}
+      timeout-minutes: ${{ inputs.timeout }}
       shell: bash
       run: |
         # Run command(s)
         ${{ inputs.commands }}
 
     - if: steps.diff.outputs.triggered == 'true' && inputs.cronjob
+      timeout-minutes: ${{ inputs.timeout }}
       shell: bash
       run: |
         # Cronjob => job
@@ -111,7 +112,7 @@ runs:
 
         # Follow
         oc wait --for=condition=ready pod --selector=job-name=${JOB_NAME} \
-           --timeout=${{ inputs.cronjob_timeout }}
+           --timeout=${{ inputs.timeout }}
         oc logs -l job-name=${JOB_NAME} --follow --tail=${{ inputs.cronjob_tail }}
 
         # Results

@@ -49,18 +49,17 @@ Provide as few as zero commands to login only.  There is a separate parameter fo
     # Number of cronjob log lines to tail; use -1 for all
     cronjob_tail: 0
 
-    # Timeout for cronjob to run; e.g. 5m
-    cronjob_timeout: 5m
-
     # Overrides the default branch to diff against
     diff_branch: ${{ github.event.repository.default_branch }}
 
     # Override GitHub default oc version >= 4.0
     oc_version: "4.14"
 
-    # Repository to clone and process
-    # Useful for consuming other repos, defaults to the current one
+    # Override repository to clone
     repository: ${{ github.repository }}
+
+    # Timeout for command or cronjob; e.g. 10m
+    timeout: 10m
 ```
 
 # Example: Login only
