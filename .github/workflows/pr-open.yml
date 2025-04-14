@@ -59,6 +59,7 @@ jobs:
           oc_namespace: ${{ vars.oc_namespace }}
           oc_server: ${{ vars.oc_server }}
           oc_token: ${{ secrets.oc_token }}
+          overwrite: true
           parameters: -p ZONE=${{ github.event.number }}
           triggers: ('.github/' 'action.yml' 'cronjob/')
       
