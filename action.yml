@@ -108,10 +108,15 @@ runs:
         JOB_NAME=${{ inputs.cronjob }}--$(date +"%Y-%m-%d--%H-%M-%S")
         oc create job ${JOB_NAME} --from=cronjob/${{ inputs.cronjob }}
 
+        # Wait for status=ready|completed - oc wait fails for overly quick jobs
+        while true; do
+          oc get pods -l job-name=${RUN_JOB} --no-headers | awk '{print $3}' | grep -i "running\|completed" && break
+          sleep 3
+        done
+
         # Follow
-        oc wait --for=condition=ready pod --selector=job-name=${JOB_NAME} \
-           --timeout=${{ inputs.timeout }}
-        oc logs -l job-name=${JOB_NAME} --follow --tail=${{ inputs.cronjob_tail }}
+        # Follow logs
+        oc logs -l job-name=${RUN_JOB} --follow --tail=${{ inputs.cronjob_tail }}
 
         # Results
         echo "JOB_NAME=${JOB_NAME}" >> $GITHUB_ENV
