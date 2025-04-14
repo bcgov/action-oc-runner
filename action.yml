@@ -103,7 +103,6 @@ runs:
 
     - if: steps.diff.outputs.triggered == 'true' && inputs.cronjob
       shell: bash
-      timeout-minutes: 1
       run: |
         # Cronjob => job
         JOB_NAME=${{ inputs.cronjob }}--$(date +"%Y-%m-%d--%H-%M-%S")
