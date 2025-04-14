@@ -83,7 +83,8 @@ jobs:
           echo "Outputs: ${{ env.outputs }}"
           if [ "${{ steps.cronjob.outputs.job-name }}" != "true" ]; then
             echo "Error!  Verify outputs."
-            exi
+            exit 1
+          fi
 
   results:
     name: PR Results
