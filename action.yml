@@ -114,7 +114,7 @@ runs:
         # Wait for status=ready|completed - oc wait fails for overly quick jobs
         timeout ${{ inputs.timeout }} bash -c "
         while true; do
-          oc get pods -l job-name=${JOB_NAME} --no-headers | awk '{print $3}' | grep -i 'running\|completed' && break
+          oc get pods -l job-name=${JOB_NAME} --no-headers | awk '{print $3}' | grep -qi 'running\|completed' && break
           sleep 5
         done" || { echo "Timeout waiting for job to start"; exit 1; }
 
