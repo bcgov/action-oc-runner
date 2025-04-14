@@ -47,6 +47,9 @@ inputs:
     pattern: '^[0-9]+[mhs]$'
 
 outputs:
+  job-name:
+    description: Name of the job created from the cronjob param
+    value: ${{ env.JOB_NAME }}
   triggered:
     description: Whether the action was triggered
     value: ${{ steps.diff.outputs.triggered }}
