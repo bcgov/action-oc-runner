@@ -124,7 +124,7 @@ runs:
         oc logs -l job-name=${RUN_JOB} --follow --tail=${{ inputs.cronjob_tail }}
 
         # Results
-        echo "JOB_NAME=${JOB_NAME}" >> $GITHUB_OUTPUT
+        echo "job-name=${JOB_NAME}" >> $GITHUB_OUTPUT
         echo "Job successful!"
 
     # Action repo needs to be present for cleanup/tests
