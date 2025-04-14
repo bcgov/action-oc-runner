@@ -33,7 +33,7 @@ inputs:
     default: 0
   cronjob_timeout:
     description: Timeout for cronjob to run; e.g. 5m
-    default: 5m
+    default: 10m
     pattern: '^[0-9]+[mhs]$'
   diff_branch:
     description: Branch to diff against
@@ -96,6 +96,7 @@ runs:
         repository: ${{ inputs.repository }}
 
     - if: steps.diff.outputs.triggered == 'true' && inputs.commands
+      timeout-minutes: ${{ inputs.cron_timeout }}
       shell: bash
       run: |
         # Run command(s)
