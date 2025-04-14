@@ -22,6 +22,7 @@ jobs:
           oc_namespace: ${{ vars.oc_namespace }}
           oc_server: ${{ vars.oc_server }}
           oc_token: ${{ secrets.oc_token }}
+          timeout: 1m
 
       - env:
           outputs: ${{ toJSON(steps.whoami.outputs) }}
@@ -71,6 +72,7 @@ jobs:
           oc_namespace: ${{ vars.oc_namespace }}
           oc_server: ${{ vars.oc_server }}
           oc_token: ${{ secrets.oc_token }}
+          timeout: 1m
           triggers: ('.github/' 'action.yml' 'cronjob/')
 
   results:
