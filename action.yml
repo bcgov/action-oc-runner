@@ -105,23 +105,28 @@ runs:
     - if: steps.diff.outputs.triggered == 'true' && inputs.cronjob
       shell: bash
       run: |
+        # Cronjob => job
         JOB_NAME=${{ inputs.cronjob }}--$(date +"%Y-%m-%d--%H-%M-%S")
-        echo "JOB_NAME=${JOB_NAME}" >> $GITHUB_ENV
-
         oc create job ${JOB_NAME} --from=cronjob/${{ inputs.cronjob }}
-        oc wait --for jsonpath='{.status.phase}'=Succeeded pod --selector=job-name=${JOB_NAME} \
+
+        # Follow
+        oc wait --for=condition=ready pod --selector=job-name=${JOB_NAME} \
            --timeout=${{ inputs.cronjob_timeout }}
+        oc logs -l job-name=${JOB_NAME} --follow --tail=${{ inputs.cronjob_tail }}
+
+        # Results
+        echo "JOB_NAME=${JOB_NAME}" >> $GITHUB_ENV
         echo "Job successful!"
 
-    # Provide logs if requested, even on fail
-    - if: always() && steps.diff.outputs.triggered == 'true' && inputs.cronjob
-      shell: bash
-      run: |
-        if [ "${{ inputs.cronjob_logs }}" != "false" ]; then
-          echo -e "\n\n--- Logs ---\n\n"
-          oc logs --tail=${{ inputs.cronjob_tail }} --selector=job-name=${JOB_NAME}
-          echo -e "\n\n---\n\n"
-        fi
+    # # Provide logs if requested, even on fail
+    # - if: always() && steps.diff.outputs.triggered == 'true' && inputs.cronjob
+    #   shell: bash
+    #   run: |
+    #     if [ "${{ inputs.cronjob_logs }}" != "false" ]; then
+    #       echo -e "\n\n--- Logs ---\n\n"
+    #       oc logs --tail=${{ inputs.cronjob_tail }} --selector=job-name=${JOB_NAME}
+    #       echo -e "\n\n---\n\n"
+    #     fi
 
     # Action repo needs to be present for cleanup/tests
     - if: steps.diff.outputs.triggered == 'true' && github.repository != inputs.repository
