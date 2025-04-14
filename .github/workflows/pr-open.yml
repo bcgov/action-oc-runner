@@ -45,6 +45,7 @@ jobs:
           oc_server: ${{ vars.oc_server }}
           oc_token: ${{ secrets.oc_token }}
           oc_version: '4.1'
+          timeout: 1m
           triggers: ('action.yml')
 
   cronjob:
