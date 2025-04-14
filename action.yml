@@ -109,11 +109,11 @@ runs:
         oc create job ${JOB_NAME} --from=cronjob/${{ inputs.cronjob }}
 
         # Wait for status=ready|completed - oc wait fails for overly quick jobs
-        timeout ${{ inputs.timeout }} bash -c '
+        timeout ${{ inputs.timeout }} bash -c "
         while true; do
-          oc get pods -l job-name=${RUN_JOB} --no-headers | awk '{print $3}' | grep -i "running\|completed" && break
+          oc get pods -l job-name=${RUN_JOB} --no-headers | awk '{print $3}' | grep -i 'running\|completed' && break
           sleep 3
-        done' || { echo "Timeout waiting for job to start"; exit 1; }
+        done" || { echo "Timeout waiting for job to start"; exit 1; }
 
         # Follow
         # Follow logs
