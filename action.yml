@@ -18,14 +18,14 @@ inputs:
     description: OpenShift access token
     required: true
     minLength: 32
-  triggers:
-    description: Paths used to trigger this action; e.g. ('./backend/' './frontend/)
 
   ### Typical / recommended
   commands:
     description: Command to run, generally oc commands; e.g. oc whoami
   cronjob:
     description: Cronjob to run, watch and report on
+  triggers:
+    description: Bash array to diff for triggering, omit to always run; e.g. ('./backend/' './frontend/)
 
   ### Usually a bad idea / not recommended
   cronjob_tail:
