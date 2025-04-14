@@ -55,7 +55,7 @@ permissions: {}
 
 runs:
   using: composite
-  timeout-minutes: ${{ inputs.timeout }}
+  timeout-minutes: 10
   steps:
     # Send triggers to diff action
     - id: diff
