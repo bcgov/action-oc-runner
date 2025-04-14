@@ -58,7 +58,6 @@ runs:
   steps:
     # Send triggers to diff action
     - id: diff
-      timeout-minutes: 1
       uses: bcgov/action-diff-triggers@v0.2.0
       with:
         triggers: ${{ inputs.triggers }}
@@ -104,6 +103,7 @@ runs:
 
     - if: steps.diff.outputs.triggered == 'true' && inputs.cronjob
       shell: bash
+      timeout-minutes: 1
       run: |
         # Cronjob => job
         JOB_NAME=${{ inputs.cronjob }}--$(date +"%Y-%m-%d--%H-%M-%S")
