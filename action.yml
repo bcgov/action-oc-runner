@@ -112,7 +112,7 @@ runs:
         timeout ${{ inputs.timeout }} bash -c "
         while true; do
           oc get pods -l job-name=${WRONG_NAME} --no-headers | awk '{print $3}' | grep -i 'running\|completed' && break
-          sleep 3
+          sleep 5
         done" || { echo "Timeout waiting for job to start"; exit 1; }
 
         # Follow
