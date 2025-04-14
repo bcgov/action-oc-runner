@@ -65,7 +65,8 @@ jobs:
           parameters: -p ZONE=${{ github.event.number }}
           triggers: ('.github/' 'action.yml' 'cronjob/')
       
-      - uses: ./
+      - id: cronjob
+        uses: ./
         with:
           cronjob: ${{ github.event.repository.name }}-${{ github.event.number }}-cronjob
           cronjob_tail: -1
@@ -74,6 +75,15 @@ jobs:
           oc_token: ${{ secrets.oc_token }}
           timeout: 1m
           triggers: ('.github/' 'action.yml' 'cronjob/')
+
+      - env:
+          outputs: ${{ toJSON(steps.cronjob.outputs) }}
+        run: |
+          # Verify outputs
+          echo "Outputs: ${{ env.outputs }}"
+          if [ "${{ steps.cronjob.outputs.triggered }}" != "true" ]; then
+            echo "Error!  Verify outputs."
+            exi
 
   results:
     name: PR Results
