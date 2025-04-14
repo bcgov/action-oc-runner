@@ -81,7 +81,7 @@ jobs:
         run: |
           # Verify outputs
           echo "Outputs: ${{ env.outputs }}"
-          if [ "${{ steps.cronjob.outputs.triggered }}" != "true" ]; then
+          if [ "${{ steps.cronjob.outputs.job-name }}" != "true" ]; then
             echo "Error!  Verify outputs."
             exi
 
