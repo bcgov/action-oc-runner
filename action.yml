@@ -55,10 +55,10 @@ permissions: {}
 
 runs:
   using: composite
-  timeout-minutes: 10
   steps:
     # Send triggers to diff action
     - id: diff
+      timeout-minutes: 1
       uses: bcgov/action-diff-triggers@v0.2.0
       with:
         triggers: ${{ inputs.triggers }}
