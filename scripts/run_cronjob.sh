@@ -6,14 +6,14 @@ set -eu
 # Check required parameters
 if [ -z "${1:-}" ]; then
     echo "Run a job from a cronjob"
-    echo "Usage: $0 <cronjobe> <timeout> <log_tail_lines>"
+    echo "Usage: $0 <cronjobe> <timeout> <cronjob_tail>"
     exit 1
 fi
 
 # Vars and defaults
 CRONJOB="$1"
 TIMEOUT="${2:-10m}"
-LOG_TAIL_LINES="${3:-1}"
+CRONJOB_TAIL="${3:-1}"
 
 # Create timestamped job name
 JOB_NAME="${CRONJOB}--$(date +"%Y-%m-%d--%H-%M-%S")"
@@ -30,7 +30,7 @@ done" || { echo "Timeout waiting for job to start"; exit 1; }
 
 # Follow logs
 echo -e "\n\n--- Start logs for job ${JOB_NAME} ---"
-oc logs -l job-name=${JOB_NAME} --follow --tail=${LOG_TAIL_LINES}
+oc logs -l job-name=${JOB_NAME} --follow --tail=${CRONJOB_TAIL}
 echo -e "--- End logs ---\n\n"
 
 # Set output for GitHub Actions
