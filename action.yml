@@ -1,5 +1,7 @@
 name: OpenShift CLI (oc) Login and Runner
-description: Action for running oc commands
+description: |
+  Action for running OpenShift (oc) commands and managing cronjobs.
+  Supports conditional execution based on file changes and provides detailed logging.
 branding:
   icon: package
   color: blue
@@ -7,42 +9,67 @@ branding:
 inputs:
   ### Required
   oc_namespace:
-    description: OpenShift namespace; e.g. abc123-dev
+    description: |
+      OpenShift namespace
+      Example: abc123-dev, abc123-test, abc123-prod
     required: true
     pattern: '^[a-z0-9]{6}-(dev|test|prod|tools)$'
   oc_server:
-    description: OpenShift server; e.g. https://api.silver.devops.gov.bc.ca:6443
+    description: |
+      OpenShift server URL with port
+      Example: https://api.silver.devops.gov.bc.ca:6443
     required: true
     pattern: '^https:\/\/.*:6443$'
   oc_token:
-    description: OpenShift access token
+    description: |
+      OpenShift access token for authentication
+      Should be stored as a GitHub secret
     required: true
     minLength: 32
 
   ### Typical / recommended
   commands:
-    description: Command to run, generally oc commands; e.g. oc whoami
+    description: |
+      Commands to run (generally oc commands)
+      Example: oc whoami
   cronjob:
-    description: Cronjob to run, watch and report on
+    description: |
+      Name of the cronjob to execute and monitor
+      Example: nr-repository-name-cronjob-component
   triggers:
-    description: Bash array to diff for triggering, omit to always run; e.g. ('./backend/' './frontend/)
+    description: |
+      Bash array to diff for triggering, omit to always run
+      Example: ('./common', './backend/' './frontend/)
 
   ### Usually a bad idea / not recommended
   cronjob_tail:
-    description: Number of cronjob log lines to tail; use -1 for all
+    description: |
+      Number of cronjob log lines to tail; use -1 for all
+      Example: 100, 200, -1
     default: -1
+    # pattern accepts -1 or any non-negative integer
+    pattern: '^(-1|[0-9]+)$'
   diff_branch:
-    description: Branch to diff against
+    description: |
+      Branch to diff against
+      Example: main, master, otherLongLivedBranchesAreDaft
     default: ${{ github.event.repository.default_branch }}
   oc_version:
-    description: Override oc version, >= 4.0; e.g. 4.14
+    description: |
+      Override oc version, >= 4.0
+      Example: 4.14
     default: ''
     pattern: '^4\.[0-9]+$'
   repository:
-    description: Optionally, specify a different repo to clone
+    description: |
+      Optionally, specify a different repo to clone
+      Example: bcgov/openshift-quickstart
     default: ${{ github.repository }}
+    pattern: '^[a-zA-Z0-9-_]+/[a-zA-Z0-9-_]+$'
   timeout:
-    description: Timeout for commands or cronjob; e.g. 10m
+    description: |
+      Timeout for commands or cronjob
+      Example: 10m, 30s, 1h
     default: 10m
     pattern: '^[0-9]+[mhs]$'
 
