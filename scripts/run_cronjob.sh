@@ -1,0 +1,39 @@
+#!/bin/bash
+
+# Exit on any error
+set -e
+
+# Check required parameters
+if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ]; then
+    echo "Usage: $0 <cronjob_name> <timeout> <log_tail_lines>"
+    exit 1
+fi
+
+CRONJOB_NAME="$1"
+TIMEOUT="$2"
+LOG_TAIL_LINES="$3"
+
+# Create timestamped job name
+JOB_NAME="${CRONJOB_NAME}--$(date +"%Y-%m-%d--%H-%M-%S")"
+
+# Create the job from cronjob
+oc create job ${JOB_NAME} --from=cronjob/${CRONJOB_NAME}
+
+# Wait for status=ready|completed - oc wait fails for overly quick jobs
+timeout ${TIMEOUT} bash -c "
+while true; do
+    oc get pods -l job-name=${JOB_NAME} --no-headers | awk '{print \$3}' | grep -qi 'running\|completed' && break
+    sleep 5
+done" || { echo "Timeout waiting for job to start"; exit 1; }
+
+# Follow logs
+echo -e "\n\n--- Start logs for job ${JOB_NAME} ---"
+oc logs -l job-name=${JOB_NAME} --follow --tail=${LOG_TAIL_LINES}
+echo -e "--- End logs ---\n\n"
+
+# Set output for GitHub Actions
+if [ -n "$GITHUB_OUTPUT" ]; then
+    echo "job-name=${JOB_NAME}" >> $GITHUB_OUTPUT
+fi
+
+echo "Job successful!"
