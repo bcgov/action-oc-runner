@@ -1,5 +1,7 @@
 name: OpenShift CLI (oc) Login and Runner
-description: Action for running oc commands
+description: |
+  Action for running OpenShift (oc) commands and managing cronjobs.
+  Supports conditional execution based on file changes and provides detailed logging.
 branding:
   icon: package
   color: blue
@@ -11,19 +13,25 @@ inputs:
     required: true
     pattern: '^[a-z0-9]{6}-(dev|test|prod|tools)$'
   oc_server:
-    description: OpenShift server; e.g. https://api.silver.devops.gov.bc.ca:6443
+    description: |
+      OpenShift server URL with port
+      Example: https://api.silver.devops.gov.bc.ca:6443
     required: true
     pattern: '^https:\/\/.*:6443$'
   oc_token:
-    description: OpenShift access token
+    description: |
+      OpenShift access token for authentication
+      Should be stored as a GitHub secret
     required: true
     minLength: 32
 
   ### Typical / recommended
   commands:
-    description: Command to run, generally oc commands; e.g. oc whoami
+    description: |
+      Commands to run (generally oc commands)
+      Example: oc whoami
   cronjob:
-    description: Cronjob to run, watch and report on
+    description: Name of the cronjob to execute and monitor
   triggers:
     description: Bash array to diff for triggering, omit to always run; e.g. ('./backend/' './frontend/)
 
