@@ -108,7 +108,6 @@ runs:
       id: cronjob
       shell: bash
       run: |
-        set -x
         # Cronjob => job
         JOB_NAME=${{ inputs.cronjob }}--$(date +"%Y-%m-%d--%H-%M-%S")
         oc create job ${JOB_NAME} --from=cronjob/${{ inputs.cronjob }}
@@ -121,7 +120,9 @@ runs:
         done" || { echo "Timeout waiting for job to start"; exit 1; }
 
         # Follow logs
+        echo -e "\n--- Start logs for job ${JOB_NAME} ---"
         oc logs -l job-name=${JOB_NAME} --follow --tail=${{ inputs.cronjob_tail }}
+        echo -e "--- End logs ---\n"
 
         # Results
         echo "job-name=${JOB_NAME}" >> $GITHUB_OUTPUT
