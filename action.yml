@@ -121,7 +121,7 @@ runs:
         done" || { echo "Timeout waiting for job to start"; exit 1; }
 
         # Follow logs
-        oc logs -l job-name=${RUN_JOB} --follow --tail=${{ inputs.cronjob_tail }}
+        oc logs -l job-name=${JOB_NAME} --follow --tail=${{ inputs.cronjob_tail }}
 
         # Results
         echo "job-name=${JOB_NAME}" >> $GITHUB_OUTPUT
