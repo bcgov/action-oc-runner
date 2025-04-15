@@ -1,29 +1,31 @@
 #!/bin/bash
 
 # Exit on any error
-set -e
+set -eu
 
 # Check required parameters
-if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ]; then
-    echo "Usage: $0 <cronjob_name> <timeout> <log_tail_lines>"
+if [ -z "${1:-}" ]; then
+    echo "Run a job from a cronjob"
+    echo "Usage: $0 <cronjobe> <timeout> <log_tail_lines>"
     exit 1
 fi
 
-CRONJOB_NAME="$1"
-TIMEOUT="$2"
-LOG_TAIL_LINES="$3"
+# Vars and defaults
+CRONJOB="$1"
+TIMEOUT="${2:10m}"
+LOG_TAIL_LINES="${3:-1}"
 
 # Create timestamped job name
-JOB_NAME="${CRONJOB_NAME}--$(date +"%Y-%m-%d--%H-%M-%S")"
+JOB_NAME="${CRONJOB}--$(date +"%Y-%m-%d--%H-%M-%S")"
 
 # Create the job from cronjob
-oc create job ${JOB_NAME} --from=cronjob/${CRONJOB_NAME}
+oc create job ${JOB_NAME} --from=cronjob/${CRONJOB}
 
 # Wait for status=ready|completed - oc wait fails for overly quick jobs
 timeout ${TIMEOUT} bash -c "
 while true; do
-    oc get pods -l job-name=${JOB_NAME} --no-headers | awk '{print \$3}' | grep -qi 'running\|completed' && break
-    sleep 5
+  oc get pods -l job-name=${JOB_NAME} --no-headers | awk '{print \$3}' | grep -qi 'running\|completed' && break
+  sleep 5
 done" || { echo "Timeout waiting for job to start"; exit 1; }
 
 # Follow logs
