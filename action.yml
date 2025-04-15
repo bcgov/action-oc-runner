@@ -119,7 +119,6 @@ runs:
           sleep 5
         done" || { echo "Timeout waiting for job to start"; exit 1; }
 
-        # Follow
         # Follow logs
         oc logs -l job-name=${RUN_JOB} --follow --tail=${{ inputs.cronjob_tail }}
 
