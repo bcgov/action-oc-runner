@@ -12,7 +12,7 @@ fi
 
 # Vars and defaults
 CRONJOB="$1"
-TIMEOUT="${2:10m}"
+TIMEOUT="${2:-10m}"
 LOG_TAIL_LINES="${3:-1}"
 
 # Create timestamped job name
