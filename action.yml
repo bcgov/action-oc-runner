@@ -108,6 +108,7 @@ runs:
       id: cronjob
       shell: bash
       run: |
+        set -x
         # Cronjob => job
         JOB_NAME=${{ inputs.cronjob }}--$(date +"%Y-%m-%d--%H-%M-%S")
         oc create job ${JOB_NAME} --from=cronjob/${{ inputs.cronjob }}
