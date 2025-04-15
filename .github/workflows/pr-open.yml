@@ -76,11 +76,9 @@ jobs:
           timeout: 1m
           triggers: ('.github/' 'action.yml' 'cronjob/')
 
-      - env:
-          outputs: ${{ toJSON(steps.cronjob.outputs) }}
-        run: |
+      - run: |
           # Verify outputs
-          echo "Outputs: ${{ env.outputs }}"
+          echo "Outputs: ${{ toJSON(steps.cronjob.outputs) }}"
           if [ "${{ steps.cronjob.outputs.job-name }}" == "" ]; then
             echo "Error!  Verify outputs."
             exit 1
