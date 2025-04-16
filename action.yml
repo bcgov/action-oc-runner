@@ -136,6 +136,10 @@ runs:
         # Run command(s)
         ${{ inputs.commands }}
 
+    - if: steps.diff.outputs.triggered == 'true' && inputs.commands && inputs.cronjob
+      shell: bash
+      run: sleep 3
+
     - if: steps.diff.outputs.triggered == 'true' && inputs.cronjob
       id: cronjob
       shell: bash
