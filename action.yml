@@ -95,13 +95,13 @@ runs:
 
     - if: steps.diff.outputs.triggered == 'true'
       env:
-        OC: ${{ inputs.oc_version || '4.14' }}
+        OC: ${{ inputs.oc_version == 'latest' && 'latest' || 'stable-'${{ inputs.oc_version }} }}
       shell: bash
       working-directory: /usr/local/bin
       run: |
         # Install CLI Tool and Login
         if ! command -v oc &> /dev/null; then
-          URL="https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-${OC}/openshift-client-linux.tar.gz"
+          URL="https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${OC}/openshift-client-linux.tar.gz"
           (wget "${URL}" -qcO - | tar -xzvf - oc) || !! || { echo "Failed to download oc client"; exit 1; }
         fi
 
