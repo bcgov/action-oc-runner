@@ -121,8 +121,9 @@ runs:
         fi
 
         # Version for client, kustomize, server and Kubernetes
-        echo "Downloaded version: ${{ env.OC }}"
+        echo -e "\nInput version: ${{ env.OC }}"
         oc version
+        echo -e "\n"
 
     - if: steps.diff.outputs.triggered == 'true'
       uses: actions/checkout@v4
