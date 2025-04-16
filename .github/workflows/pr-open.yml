@@ -55,7 +55,7 @@ jobs:
       - id: cronjob
         uses: ./
         with:
-          commands: oc process -f cronjob/openshift.deploy.yml -p ZONE=${{ github.event.number }} | oc create -f -
+          commands: oc process -f cronjob/openshift.deploy.yml -p ZONE=${{ github.event.number }} | oc apply -f -
           cronjob: ${{ github.event.repository.name }}-${{ github.event.number }}-cronjob
           cronjob_tail: -1
           oc_namespace: ${{ vars.oc_namespace }}
