@@ -13,12 +13,12 @@ permissions: {}
 
 jobs:
   cleanup:
-    name: Cleanup and Image Promotion
-    uses: bcgov/quickstart-openshift-helpers/.github/workflows/.pr-close.yml@v0.9.0
-    permissions:
-      packages: write
-    secrets:
-      oc_namespace: ${{ vars.OC_NAMESPACE }}
-      oc_token: ${{ secrets.OC_TOKEN }}
-    with:
-      cleanup: label
+    name: OpenShift Cleanup
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: ./
+      with:
+        commands: oc delete all,secret,cm,pvc -l app=${{ github.event.repository.name }}-${{ github.event.number }}
+        oc_namespace: ${{ vars.oc_namespace }}
+        oc_server: ${{ vars.oc_server }}
+        oc_token: ${{ secrets.oc_token }}
