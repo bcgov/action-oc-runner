@@ -121,7 +121,7 @@ runs:
         fi
 
         # Version for client, kustomize, server and Kubernetes
-        echo -e "\nInput version: ${{ env.OC }}"
+        echo -e "\nInput Version: ${{ env.OC }}"
         oc version
         echo
 
