@@ -95,7 +95,7 @@ runs:
 
     - if: steps.diff.outputs.triggered == 'true'
       env:
-        OC: ${{ inputs.oc_version == 'latest' && 'latest' || 'stable-'${{ inputs.oc_version }} }}
+        OC: ${{ inputs.oc_version == 'latest' && 'latest' || 'stable-'inputs.oc_version }}
       shell: bash
       working-directory: /usr/local/bin
       run: |
