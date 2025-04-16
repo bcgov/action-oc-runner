@@ -16,9 +16,10 @@ jobs:
     name: OpenShift Cleanup
     runs-on: ubuntu-24.04
     steps:
-    - uses: ./
-      with:
-        commands: oc delete all,secret,cm,pvc -l app=${{ github.event.repository.name }}-${{ github.event.number }}
-        oc_namespace: ${{ vars.oc_namespace }}
-        oc_server: ${{ vars.oc_server }}
-        oc_token: ${{ secrets.oc_token }}
+      - uses: actions/checkout@v4
+      - uses: ./
+        with:
+          commands: oc delete all -l app=${{ github.event.repository.name }}-${{ github.event.number }}
+          oc_namespace: ${{ vars.oc_namespace }}
+          oc_server: ${{ vars.oc_server }}
+          oc_token: ${{ secrets.oc_token }}
