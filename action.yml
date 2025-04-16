@@ -58,7 +58,7 @@ inputs:
     description: |
       Override oc version, >= 4.0
       Example: 4.16
-    default: '4.16'
+    default: '4.14'
     pattern: '^4\.[0-9]+$'
   repository:
     description: |
@@ -119,6 +119,10 @@ runs:
           echo "Project and token do not match!"
           exit 1
         fi
+
+        # Version for client, kustomize, server and Kubernetes
+        echo "Downloaded version: ${{ env.OC }}"
+        oc version
 
     - if: steps.diff.outputs.triggered == 'true'
       uses: actions/checkout@v4
