@@ -123,7 +123,7 @@ runs:
         # Version for client, kustomize, server and Kubernetes
         echo -e "\nInput version: ${{ env.OC }}"
         oc version
-        echo -e "\n"
+        echo
 
     - if: steps.diff.outputs.triggered == 'true'
       uses: actions/checkout@v4
