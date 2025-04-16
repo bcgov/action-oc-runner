@@ -57,8 +57,8 @@ inputs:
   oc_version:
     description: |
       Override oc version, >= 4.0
-      Example: 4.14
-    default: ''
+      Example: 4.16
+    default: '4.14'
     pattern: '^4\.[0-9]+$'
   repository:
     description: |
@@ -95,13 +95,13 @@ runs:
 
     - if: steps.diff.outputs.triggered == 'true'
       env:
-        OC: ${{ inputs.oc_version || '4.14' }}
+        OC: ${{ inputs.oc_version == 'latest' && 'latest' || format('stable-{0}', inputs.oc_version) }}
       shell: bash
       working-directory: /usr/local/bin
       run: |
         # Install CLI Tool and Login
         if ! command -v oc &> /dev/null; then
-          URL="https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-${OC}/openshift-client-linux.tar.gz"
+          URL="https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${OC}/openshift-client-linux.tar.gz"
           (wget "${URL}" -qcO - | tar -xzvf - oc) || !! || { echo "Failed to download oc client"; exit 1; }
         fi
 
@@ -120,6 +120,11 @@ runs:
           exit 1
         fi
 
+        # Version for client, kustomize, server and Kubernetes
+        echo -e "\nInput Version: ${{ env.OC }}"
+        oc version
+        echo
+
     - if: steps.diff.outputs.triggered == 'true'
       uses: actions/checkout@v4
       with:
@@ -130,6 +135,10 @@ runs:
       run: |
         # Run command(s)
         ${{ inputs.commands }}
+
+    - if: steps.diff.outputs.triggered == 'true' && inputs.commands && inputs.cronjob
+      shell: bash
+      run: sleep 3
 
     - if: steps.diff.outputs.triggered == 'true' && inputs.cronjob
       id: cronjob

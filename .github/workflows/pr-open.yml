@@ -22,6 +22,7 @@ jobs:
           oc_namespace: ${{ vars.oc_namespace }}
           oc_server: ${{ vars.oc_server }}
           oc_token: ${{ secrets.oc_token }}
+          oc_version: 4.16
           timeout: 1m
 
       - run: |
@@ -55,12 +56,13 @@ jobs:
       - id: cronjob
         uses: ./
         with:
-          commands: oc process -f cronjob/openshift.deploy.yml -p ZONE=${{ github.event.number }} | oc create -f -
+          commands: oc process -f cronjob/openshift.deploy.yml -p ZONE=${{ github.event.number }} | oc apply -f -
           cronjob: ${{ github.event.repository.name }}-${{ github.event.number }}-cronjob
           cronjob_tail: -1
           oc_namespace: ${{ vars.oc_namespace }}
           oc_server: ${{ vars.oc_server }}
           oc_token: ${{ secrets.oc_token }}
+          oc_version: latest
           timeout: 1m
           triggers: ('.github/' 'action.yml' 'cronjob/')
 
