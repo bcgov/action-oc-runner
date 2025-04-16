@@ -51,21 +51,11 @@ jobs:
     name: Test CronJob
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - name: Cronjob
-        uses: bcgov/action-deployer-openshift@v4.0.0
-        with:
-          file: cronjob/openshift.deploy.yml
-          oc_namespace: ${{ vars.oc_namespace }}
-          oc_server: ${{ vars.oc_server }}
-          oc_token: ${{ secrets.oc_token }}
-          overwrite: true
-          parameters: -p ZONE=${{ github.event.number }}
-          triggers: ('.github/' 'action.yml' 'cronjob/')
-      
+      - uses: actions/checkout@v4      
       - id: cronjob
         uses: ./
         with:
+          commands: oc process -f cronjob/openshift.deploy.yml -p ZONE=${{ github.event.number }} | oc create -f -
           cronjob: ${{ github.event.repository.name }}-${{ github.event.number }}-cronjob
           cronjob_tail: -1
           oc_namespace: ${{ vars.oc_namespace }}
