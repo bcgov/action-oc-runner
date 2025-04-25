@@ -39,14 +39,6 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - shell: bash
-        run: |
-          # Verify that the repository is checked out
-          git branch -a
-          git remote -v
-          whoami
-          ls -la
-          pwd
 
       - id: repository
         uses: ./
