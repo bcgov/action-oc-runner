@@ -64,6 +64,7 @@ jobs:
           oc_server: ${{ vars.oc_server }}
           oc_token: ${{ secrets.oc_token }}
           repository: bcgov/quickstart-openshift
+          ref: comparison
           timeout: 1m
 
       - run: |
