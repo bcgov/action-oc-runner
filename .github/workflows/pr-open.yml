@@ -52,14 +52,14 @@ jobs:
         with:
           commands: |
             git remote -v
-            if ! git remote -v | grep -q "bcgov/openshift-quickstart"; then
-              echo "Error! Repository bcgov/openshift-quickstart is not checked out."
+            if ! git remote -v | grep -q "bcgov/quickstart-openshift"; then
+              echo "Error! Repository bcgov/quickstart-openshift is not checked out."
               exit 1
             fi
           oc_namespace: ${{ vars.oc_namespace }}
           oc_server: ${{ vars.oc_server }}
           oc_token: ${{ secrets.oc_token }}
-          repository: bcgov/openshift-quickstart
+          repository: bcgov/quickstart-openshift
           timeout: 1m
 
       - run: |
