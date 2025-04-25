@@ -58,6 +58,9 @@ Provide as few as zero commands to login only.  There is a separate parameter fo
     # Override repository to clone
     repository: ${{ github.repository }}
 
+    # Override branch, tag or SHA to clone; omit to use the default branch
+    ref: ${{ github.event.repository.default_branch }}
+
     # Timeout for command or cronjob; e.g. 10m
     timeout: 10m
 ```
