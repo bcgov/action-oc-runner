@@ -1,8 +1,7 @@
 #!/bin/bash
 
 # Strict error handling
-set -eu
-set -o pipefail
+set -euo pipefail
 
 # Logging functions
 log_info() { echo "INFO: [$(date +'%Y-%m-%d %H:%M:%S')] $*"; }

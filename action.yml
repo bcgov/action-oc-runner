@@ -52,7 +52,7 @@ inputs:
   diff_branch:
     description: |
       Branch to diff against
-      Example: main, master, otherLongLivedBranchesAreDaft
+      Example: main, master, SHA or tag
     default: ${{ github.event.repository.default_branch }}
   oc_version:
     description: |
@@ -66,6 +66,11 @@ inputs:
       Example: bcgov/openshift-quickstart
     default: ${{ github.repository }}
     pattern: '^[a-zA-Z0-9-_]+/[a-zA-Z0-9-_]+$'
+  ref:
+    description: |
+      The branch, tag or SHA to checkout; omit to use the default branch
+      Example: main, master, SHA or tag
+    default: ${{ github.event.repository.default_branch }}
   timeout:
     description: |
       Timeout for commands or cronjob
@@ -129,6 +134,7 @@ runs:
       uses: actions/checkout@v4
       with:
         repository: ${{ inputs.repository }}
+        ref: ${{ inputs.ref }}
 
     - if: steps.diff.outputs.triggered == 'true' && inputs.commands
       shell: bash
