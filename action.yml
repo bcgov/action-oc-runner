@@ -52,7 +52,7 @@ inputs:
   diff_branch:
     description: |
       Branch to diff against
-      Example: main, master, otherLongLivedBranchesAreDaft
+      Example: main, master, doNotUseLongLivedBranches
     default: ${{ github.event.repository.default_branch }}
   oc_version:
     description: |
@@ -69,7 +69,7 @@ inputs:
   ref:
     description: |
       The branch, tag or SHA to checkout; omit to use the default branch
-      Example: main, master, otherLongLivedBranchesAreDaft
+      Example: main, master, doNotUseLongLivedBranches
     default: ${{ github.event.repository.default_branch }}
   timeout:
     description: |
