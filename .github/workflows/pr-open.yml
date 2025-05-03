@@ -24,7 +24,7 @@ jobs:
           oc_token: ${{ secrets.oc_token }}
           oc_version: 4.16
           timeout: 1m
-          triggers: ('.github/ 'action.yml')
+          triggers: ('.github/' 'action.yml')
 
       - if: steps.whoami.outputs.triggered != 'false'
         run: |
@@ -60,7 +60,7 @@ jobs:
           repository: bcgov/quickstart-openshift
           ref: ''
           timeout: 1m
-          triggers: ('.github/ 'action.yml')
+          triggers: ('.github/' 'action.yml')
 
       - run: |
           # Verify outputs
@@ -83,7 +83,7 @@ jobs:
           oc_token: ${{ secrets.oc_token }}
           oc_version: '4.1'
           timeout: 1m
-          triggers: ('.github/ 'action.yml')
+          triggers: ('.github/' 'action.yml')
 
   cronjob:
     name: Test CronJob
