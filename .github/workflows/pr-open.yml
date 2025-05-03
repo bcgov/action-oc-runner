@@ -100,7 +100,8 @@ jobs:
           timeout: 1m
           triggers: ('.github/' 'action.yml' 'cronjob/' 'scripts/run_cronjob.sh')
 
-      - run: |
+      - if: steps.cronjob.outputs.triggered != 'false'
+        run: |
           # Verify outputs
           echo "Outputs: ${{ toJSON(steps.cronjob.outputs) }}"
           if [ "${{ steps.cronjob.outputs.job-name }}" == "" ]; then
