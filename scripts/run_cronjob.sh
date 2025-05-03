@@ -7,6 +7,7 @@ set -euo pipefail
 log_info() { echo "INFO: [$(date +'%Y-%m-%d %H:%M:%S')] $*"; }
 log_error() { echo "ERROR: [$(date +'%Y-%m-%d %H:%M:%S')] $*" >&2; }
 log_debug() { [[ "${DEBUG:-false}" == "true" ]] && echo "DEBUG: [$(date +'%Y-%m-%d %H:%M:%S')] $*"; }
+MAX_RETRIES=3  # Number of times to retry job status check
 
 # Cleanup function
 cleanup() {
@@ -63,10 +64,29 @@ fi
 log_info "Log stream completed"
 
 # Check job status
-if ! oc get job "${JOB_NAME}" -o jsonpath='{.status.succeeded}' | grep -q "1"; then
-    log_error "Job did not complete successfully"
-    exit 1
-fi
+check_job_status() {
+    local retry_count=0
+    while [ $retry_count -lt $MAX_RETRIES ]; do
+        local status=$(oc get job "${JOB_NAME}" -o json)
+        local succeeded=$(echo "$status" | jq -r '.status.succeeded // 0')
+        local failed=$(echo "$status" | jq -r '.status.failed // 0')
+        local active=$(echo "$status" | jq -r '.status.active // 0')
+
+        log_debug "Job status: succeeded=$succeeded, failed=$failed, active=$active"
+
+        if [ "$succeeded" = "1" ]; then
+            return 0
+        elif [ "$failed" = "1" ]; then
+            return 1
+        fi
+
+        retry_count=$((retry_count + 1))
+        [ $retry_count -lt $MAX_RETRIES ] && sleep 2
+    done
+    return 1
+}
+
+check_job_status || { log_error "Job status check failed after $MAX_RETRIES attempts"; exit 1; }
 
 # Set output for GitHub Actions
 if [ -n "$GITHUB_OUTPUT" ]; then
