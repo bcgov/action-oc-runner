@@ -2,6 +2,7 @@
 
 # Strict error handling
 set -euo pipefail
+IFS=$'\n\t'
 
 # Logging functions
 log_info() { echo "INFO: [$(date +'%Y-%m-%d %H:%M:%S')] $*"; }
@@ -88,9 +89,19 @@ check_job_status() {
 
 check_job_status || { log_error "Job status check failed after $MAX_RETRIES attempts"; exit 1; }
 
-# Set output for GitHub Actions
-if [ -n "$GITHUB_OUTPUT" ]; then
-    echo "job-name=${JOB_NAME}" >> $GITHUB_OUTPUT
-fi
+# Handle GitHub Actions output
+set_github_output() {
+    local name="$1"
+    local value="$2"
+    if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
+        echo "${name}=${value}" >> "$GITHUB_OUTPUT"
+        log_debug "Set GitHub output ${name}=${value}"
+    else
+        log_debug "GITHUB_OUTPUT not set, skipping output generation"
+    fi
+}
+
+# Set the job name as output
+set_github_output "job-name" "${JOB_NAME}"
 
 log_info "Job successful!"
