@@ -98,7 +98,7 @@ jobs:
           oc_token: ${{ secrets.oc_token }}
           oc_version: latest
           timeout: 1m
-          triggers: ('.github/' 'action.yml' 'cronjob/')
+          triggers: ('.github/' 'action.yml' 'cronjob/' 'scripts/run_cronjob.sh')
 
       - run: |
           # Verify outputs
