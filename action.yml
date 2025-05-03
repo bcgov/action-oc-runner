@@ -105,9 +105,24 @@ runs:
       working-directory: /usr/local/bin
       run: |
         # Install CLI Tool and Login
-        if ! command -v oc &> /dev/null; then
+        # Check if oc is already installed
+        if ! command -v oc &>/dev/null; then
           URL="https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${OC}/openshift-client-linux.tar.gz"
-          (wget "${URL}" -qcO - | tar -xzvf - oc) || !! || { echo "Failed to download oc client"; exit 1; }
+          echo "Downloading OpenShift CLI from ${URL}..."
+
+          # Download the archive
+          if ! wget "${URL}" -qO oc.tar.gz; then
+            echo "Error: Failed to download OpenShift CLI"
+            exit 1
+          fi
+
+          # Extract the oc binary
+          if ! tar -xzf oc.tar.gz oc; then
+            echo "Error: Failed to extract oc binary"
+            rm -f oc.tar.gz
+            exit 1
+          fi
+          rm -f oc.tar.gz
         fi
 
         # OpenShift login
