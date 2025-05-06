@@ -4,7 +4,7 @@ set -euo pipefail
 
 # Enhanced logging functions with timestamps
 log_info() { echo "INFO: [$(date +'%Y-%m-%d %H:%M:%S')] $*"; }
-log_error() { echo "ERROR: [$(date +'%Y-%m-%d %H:%M:%S')] $*" >&2; exit 1 }
+log_error() { echo "ERROR: [$(date +'%Y-%m-%d %H:%M:%S')] $*" >&2; exit 1; }
 log_warn() { echo "WARN: [$(date +'%Y-%m-%d %H:%M:%S')] $*" >&2; }
 log_success() { echo "SUCCESS: [$(date +'%Y-%m-%d %H:%M:%S')] $*"; }
 log_debug() { [[ "${DEBUG:-false}" == "true" ]] && echo "DEBUG: [$(date +'%Y-%m-%d %H:%M:%S')] $*"; }
