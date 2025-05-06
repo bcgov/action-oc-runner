@@ -124,7 +124,9 @@ set_github_output() {
     log_debug "GITHUB_OUTPUT is set to: ${GITHUB_OUTPUT:-unset}"
 
     # Check if GITHUB_OUTPUT is set
+    echo "Check if GITHUB_OUTPUT is set"
     if [[ -z "${GITHUB_OUTPUT:-}" ]]; then
+        echo "Check if GITHUB_OUTPUT is not set"
         log_error "GITHUB_OUTPUT is not set. Skipping output generation."
         return 1
     fi
