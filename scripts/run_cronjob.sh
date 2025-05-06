@@ -130,6 +130,7 @@ set_github_output() {
     fi
 
     # Write to GITHUB_OUTPUT
+    echo "Write to GITHUB_OUTPUT: ${name}=${value}"
     if ! echo "${name}=${value}" >> "$GITHUB_OUTPUT"; then
         log_error "Failed to write to GITHUB_OUTPUT."
         return 1
