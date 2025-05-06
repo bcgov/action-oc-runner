@@ -119,12 +119,23 @@ echo "Here! line 116"
 set_github_output() {
     local name="$1"
     local value="$2"
-    if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
-        echo "${name}=${value}" >> "$GITHUB_OUTPUT"
-        log_debug "Set GitHub output ${name}=${value}"
-    else
-        log_debug "GITHUB_OUTPUT not set, skipping output generation"
+
+    # Debugging logs to check GITHUB_OUTPUT
+    log_debug "GITHUB_OUTPUT is set to: ${GITHUB_OUTPUT:-unset}"
+
+    # Check if GITHUB_OUTPUT is set
+    if [[ -z "${GITHUB_OUTPUT:-}" ]]; then
+        log_error "GITHUB_OUTPUT is not set. Skipping output generation."
+        return 1
     fi
+
+    # Write to GITHUB_OUTPUT
+    if ! echo "${name}=${value}" >> "$GITHUB_OUTPUT"; then
+        log_error "Failed to write to GITHUB_OUTPUT."
+        return 1
+    fi
+
+    log_debug "Successfully set GitHub output ${name}=${value}"
 }
 echo "Here! line 129"
 
