@@ -135,7 +135,11 @@ set_github_output() {
     log_debug "Successfully set GitHub output ${name}=${value}"
 }
 
-# # Set the job name as output
+# Set the job name as output
 # set_github_output "job-name" "${JOB_NAME}"
+# Set output for GitHub Actions
+if [ -n "$GITHUB_OUTPUT" ]; then
+    echo "job-name=${JOB_NAME}" >> $GITHUB_OUTPUT
+fi
 
-# log_info "Job successful!"
+log_info "Job successful!"
