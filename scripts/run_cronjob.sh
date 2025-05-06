@@ -83,9 +83,7 @@ check_job_status() {
         log_debug "Job status check attempt $((retry_count + 1)): succeeded=$succeeded, failed=$failed, active=$active"
 
         if [ "$succeeded" = "1" ]; then
-            echo "Here! line 86"
             log_success "Job completed successfully"
-            echo "Here! line 88"
             return 0
         elif [ "$failed" = "1" ]; then
             log_error "Job failed with status: failed=$failed"
@@ -113,7 +111,6 @@ check_job_status() {
 }
 
 check_job_status || { log_error "Job status check failed after $MAX_RETRIES attempts"; exit 1; }
-echo "Here! line 116"
 
 # Handle GitHub Actions output
 set_github_output() {
@@ -124,15 +121,12 @@ set_github_output() {
     log_debug "GITHUB_OUTPUT is set to: ${GITHUB_OUTPUT:-unset}"
 
     # Check if GITHUB_OUTPUT is set
-    echo "Check if GITHUB_OUTPUT is set"
     if [[ -z "${GITHUB_OUTPUT:-}" ]]; then
-        echo "Check if GITHUB_OUTPUT is not set"
         log_error "GITHUB_OUTPUT is not set. Skipping output generation."
         return 1
     fi
 
     # Write to GITHUB_OUTPUT
-    echo "Write to GITHUB_OUTPUT: ${name}=${value}"
     if ! echo "${name}=${value}" >> "$GITHUB_OUTPUT"; then
         log_error "Failed to write to GITHUB_OUTPUT."
         return 1
@@ -140,10 +134,8 @@ set_github_output() {
 
     log_debug "Successfully set GitHub output ${name}=${value}"
 }
-echo "Here! line 129"
 
-# Set the job name as output
-set_github_output "job-name" "${JOB_NAME}"
-echo "Here! line 133"
+# # Set the job name as output
+# set_github_output "job-name" "${JOB_NAME}"
 
-log_info "Job successful!"
+# log_info "Job successful!"

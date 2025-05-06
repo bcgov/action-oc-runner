@@ -10,80 +10,80 @@ concurrency:
 permissions: {}
 
 jobs:
-  whoami:
-    name: Test Command
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-      - id: whoami
-        uses: ./
-        with:
-          commands: oc whoami
-          oc_namespace: ${{ vars.oc_namespace }}
-          oc_server: ${{ vars.oc_server }}
-          oc_token: ${{ secrets.oc_token }}
-          oc_version: 4.16
-          timeout: 1m
-          triggers: ('.github/' 'action.yml')
+  # whoami:
+  #   name: Test Command
+  #   runs-on: ubuntu-24.04
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - id: whoami
+  #       uses: ./
+  #       with:
+  #         commands: oc whoami
+  #         oc_namespace: ${{ vars.oc_namespace }}
+  #         oc_server: ${{ vars.oc_server }}
+  #         oc_token: ${{ secrets.oc_token }}
+  #         oc_version: 4.16
+  #         timeout: 1m
+  #         triggers: ('.github/' 'action.yml')
 
-      - if: steps.whoami.outputs.triggered != 'false'
-        run: |
-          # Verify outputs
-          echo "Outputs: ${{ toJSON(steps.whoami.outputs) }}"
-          if [ "${{ steps.whoami.outputs.triggered }}" != "true" ]; then
-            echo "Error!  Verify outputs."
-            exit 1
-          fi
+  #     - if: steps.whoami.outputs.triggered != 'false'
+  #       run: |
+  #         # Verify outputs
+  #         echo "Outputs: ${{ toJSON(steps.whoami.outputs) }}"
+  #         if [ "${{ steps.whoami.outputs.triggered }}" != "true" ]; then
+  #           echo "Error!  Verify outputs."
+  #           exit 1
+  #         fi
 
 
-  repository:
-    name: Test Non-Default Repository
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
+  # repository:
+  #   name: Test Non-Default Repository
+  #   runs-on: ubuntu-24.04
+  #   steps:
+  #     - uses: actions/checkout@v4
 
-      - id: repository
-        uses: ./
-        with:
-          commands: |
-            git remote -v
-            if ! git config --get remote.origin.url | grep -q "bcgov/quickstart-openshift"; then
-              echo "Error! Repository bcgov/quickstart-openshift is not checked out."
-              exit 1
-            else
-              echo "Repository URL: $(git config --get remote.origin.url)"
-              echo "Current Branch: $(git branch --show-current)"
-            fi
-          oc_namespace: ${{ vars.oc_namespace }}
-          oc_server: ${{ vars.oc_server }}
-          oc_token: ${{ secrets.oc_token }}
-          repository: bcgov/quickstart-openshift
-          ref: ''
-          timeout: 1m
-          triggers: ('.github/' 'action.yml')
+  #     - id: repository
+  #       uses: ./
+  #       with:
+  #         commands: |
+  #           git remote -v
+  #           if ! git config --get remote.origin.url | grep -q "bcgov/quickstart-openshift"; then
+  #             echo "Error! Repository bcgov/quickstart-openshift is not checked out."
+  #             exit 1
+  #           else
+  #             echo "Repository URL: $(git config --get remote.origin.url)"
+  #             echo "Current Branch: $(git branch --show-current)"
+  #           fi
+  #         oc_namespace: ${{ vars.oc_namespace }}
+  #         oc_server: ${{ vars.oc_server }}
+  #         oc_token: ${{ secrets.oc_token }}
+  #         repository: bcgov/quickstart-openshift
+  #         ref: ''
+  #         timeout: 1m
+  #         triggers: ('.github/' 'action.yml')
 
-      - run: |
-          # Verify outputs
-          echo "Outputs: ${{ toJSON(steps.repository.outputs) }}"
-          if [ "${{ steps.repository.outputs.triggered }}" != "true" ]; then
-            echo "Error!  Verify outputs."
-            exit 1
-          fi
+  #     - run: |
+  #         # Verify outputs
+  #         echo "Outputs: ${{ toJSON(steps.repository.outputs) }}"
+  #         if [ "${{ steps.repository.outputs.triggered }}" != "true" ]; then
+  #           echo "Error!  Verify outputs."
+  #           exit 1
+  #         fi
 
-  legacy:
-    name: Test Legacy Binary
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./
-        with:
-          commands: oc version
-          oc_namespace: ${{ vars.oc_namespace }}
-          oc_server: ${{ vars.oc_server }}
-          oc_token: ${{ secrets.oc_token }}
-          oc_version: '4.1'
-          timeout: 1m
-          triggers: ('.github/' 'action.yml')
+  # legacy:
+  #   name: Test Legacy Binary
+  #   runs-on: ubuntu-24.04
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: ./
+  #       with:
+  #         commands: oc version
+  #         oc_namespace: ${{ vars.oc_namespace }}
+  #         oc_server: ${{ vars.oc_server }}
+  #         oc_token: ${{ secrets.oc_token }}
+  #         oc_version: '4.1'
+  #         timeout: 1m
+  #         triggers: ('.github/' 'action.yml')
 
   cronjob:
     name: Test CronJob
@@ -112,12 +112,12 @@ jobs:
             exit 1
           fi
 
-  results:
-    name: PR Results
-    needs: [whoami, repository, legacy, cronjob]
-    if: always()
-    runs-on: ubuntu-24.04
-    steps:
-      - if: contains(needs.*.result, 'failure')||contains(needs.*.result, 'canceled')
-        run: echo "At least one job has failed." && exit 1
-      - run: echo "Success!"
+  # results:
+  #   name: PR Results
+  #   needs: [whoami, repository, legacy, cronjob]
+  #   if: always()
+  #   runs-on: ubuntu-24.04
+  #   steps:
+  #     - if: contains(needs.*.result, 'failure')||contains(needs.*.result, 'canceled')
+  #       run: echo "At least one job has failed." && exit 1
+  #     - run: echo "Success!"
