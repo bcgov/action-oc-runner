@@ -1,8 +1,6 @@
 #!/bin/bash
 
-# Strict error handling
 set -euo pipefail
-IFS=$'\n\t'
 
 # Enhanced logging functions with timestamps
 log_info() { echo "INFO: [$(date +'%Y-%m-%d %H:%M:%S')] $*"; }
