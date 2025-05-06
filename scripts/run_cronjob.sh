@@ -83,6 +83,7 @@ check_job_status() {
         log_debug "Job status check attempt $((retry_count + 1)): succeeded=$succeeded, failed=$failed, active=$active"
 
         if [ "$succeeded" = "1" ]; then
+            echo "Here! line 86"
             log_success "Job completed successfully"
             "Here! line 87"
             return 0
