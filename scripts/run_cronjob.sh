@@ -101,4 +101,4 @@ check_job_status() {
 check_job_status || exit 1
 
 # Set GitHub Actions output if necessary
-[ ! -n "$GITHUB_OUTPUT" ] || echo "job-name=${JOB_NAME}" >> $GITHUB_OUTPUT
+[ ! -n "$GITHUB_OUTPUT" ] ||( echo "job-name=${JOB_NAME}" >> $GITHUB_OUTPUT )
