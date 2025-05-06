@@ -1,7 +1,7 @@
 #!/bin/bash
 
 set -euo pipefail
-set -x  # Enable debugging
+
 # Enhanced logging functions with timestamps
 log_info() { echo "INFO: [$(date +'%Y-%m-%d %H:%M:%S')] $*"; }
 log_error() { echo "ERROR: [$(date +'%Y-%m-%d %H:%M:%S')] $*" >&2; }
@@ -112,32 +112,7 @@ check_job_status() {
 
 check_job_status || { log_error "Job status check failed after $MAX_RETRIES attempts"; exit 1; }
 
-# Handle GitHub Actions output
-set_github_output() {
-    local name="$1"
-    local value="$2"
-
-    # Debugging logs to check GITHUB_OUTPUT
-    log_debug "GITHUB_OUTPUT is set to: ${GITHUB_OUTPUT:-unset}"
-
-    # Check if GITHUB_OUTPUT is set
-    if [[ -z "${GITHUB_OUTPUT:-}" ]]; then
-        log_error "GITHUB_OUTPUT is not set. Skipping output generation."
-        return 1
-    fi
-
-    # Write to GITHUB_OUTPUT
-    if ! echo "${name}=${value}" >> "$GITHUB_OUTPUT"; then
-        log_error "Failed to write to GITHUB_OUTPUT."
-        return 1
-    fi
-
-    log_debug "Successfully set GitHub output ${name}=${value}"
-}
-
-# Set the job name as output
-# set_github_output "job-name" "${JOB_NAME}"
-# Set output for GitHub Actions
+# Set GitHub Actions output if necessary
 if [ -n "$GITHUB_OUTPUT" ]; then
     echo "job-name=${JOB_NAME}" >> $GITHUB_OUTPUT
 fi
