@@ -1,12 +1,10 @@
 #!/bin/bash
 
-# Strict error handling
 set -euo pipefail
-IFS=$'\n\t'
 
 # Enhanced logging functions with timestamps
 log_info() { echo "INFO: [$(date +'%Y-%m-%d %H:%M:%S')] $*"; }
-log_error() { echo "ERROR: [$(date +'%Y-%m-%d %H:%M:%S')] $*" >&2; }
+log_error() { echo "ERROR: [$(date +'%Y-%m-%d %H:%M:%S')] $*" >&2; exit 1; }
 log_warn() { echo "WARN: [$(date +'%Y-%m-%d %H:%M:%S')] $*" >&2; }
 log_success() { echo "SUCCESS: [$(date +'%Y-%m-%d %H:%M:%S')] $*"; }
 log_debug() { [[ "${DEBUG:-false}" == "true" ]] && echo "DEBUG: [$(date +'%Y-%m-%d %H:%M:%S')] $*"; }
@@ -48,7 +46,6 @@ log_info "Creating job: ${JOB_NAME}"
 # Create the job from cronjob
 if ! oc create job "${JOB_NAME}" --from="cronjob/${CRONJOB}"; then
     log_error "Failed to create job from cronjob"
-    exit 1
 fi
 
 # Wait for status=ready|completed - oc wait fails for overly quick jobs
@@ -57,22 +54,20 @@ timeout "${TIMEOUT}" bash -c "
 while true; do
   oc get pods -l job-name=${JOB_NAME} --no-headers | awk '{print \$3}' | grep -qi 'running\|completed' && break
   sleep 5
-done" || { log_error "Timeout waiting for job to start"; exit 1; }
+done" || log_error "Timeout waiting for job to start"
 
 # Follow logs
 log_info "Starting log stream for job ${JOB_NAME}"
 if ! oc logs -l "job-name=${JOB_NAME}" --follow --tail="${CRONJOB_TAIL}"; then
     log_error "Failed to retrieve logs"
-    exit 1
 fi
 log_info "Log stream completed"
 
-# Enhanced job status checking with exponential backoff
+# Simplified job status checking
 check_job_status() {
     local retry_count=0
     local wait_time=2
 
-    # Initial delay to allow job status to update
     sleep 3
 
     while [ $retry_count -lt $MAX_RETRIES ]; do
@@ -80,7 +75,6 @@ check_job_status() {
         local succeeded=$(echo "$status" | jq -r '.status.succeeded // 0')
         local failed=$(echo "$status" | jq -r '.status.failed // 0')
         local active=$(echo "$status" | jq -r '.status.active // 0')
-        local conditions=$(echo "$status" | jq -r '.status.conditions // []')
 
         log_debug "Job status check attempt $((retry_count + 1)): succeeded=$succeeded, failed=$failed, active=$active"
 
@@ -89,44 +83,22 @@ check_job_status() {
             return 0
         elif [ "$failed" = "1" ]; then
             log_error "Job failed with status: failed=$failed"
-            oc describe job "${JOB_NAME}"
-            return 1
         elif [ "$active" = "1" ]; then
             log_info "Job is still running..."
         else
             log_warn "Job status unclear, will retry..."
         fi
 
-        retry_count=$((retry_count + 1))
-        if [ $retry_count -lt $MAX_RETRIES ]; then
-            # Exponential backoff with maximum of 10 seconds
-            wait_time=$(( wait_time * 2 ))
-            [ $wait_time -gt 10 ] && wait_time=10
-            log_info "Waiting ${wait_time} seconds before next check..."
-            sleep $wait_time
-        fi
+        retry_count=$(( retry_count + 1))
+        wait_time=$(( wait_time * 2 ))
+        [ $wait_time -gt 10 ] && wait_time=10
+        log_info "Waiting ${wait_time} seconds before next check..."
+        sleep $wait_time
     done
 
     log_error "Job status could not be determined after $MAX_RETRIES attempts"
-    oc describe job "${JOB_NAME}"
-    return 1
 }
+check_job_status || exit 1
 
-check_job_status || { log_error "Job status check failed after $MAX_RETRIES attempts"; exit 1; }
-
-# Handle GitHub Actions output
-set_github_output() {
-    local name="$1"
-    local value="$2"
-    if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
-        echo "${name}=${value}" >> "$GITHUB_OUTPUT"
-        log_debug "Set GitHub output ${name}=${value}"
-    else
-        log_debug "GITHUB_OUTPUT not set, skipping output generation"
-    fi
-}
-
-# Set the job name as output
-set_github_output "job-name" "${JOB_NAME}"
-
-log_info "Job successful!"
+# Set GitHub Actions output if necessary
+[ ! -n "$GITHUB_OUTPUT" ] ||( echo "job-name=${JOB_NAME}" >> $GITHUB_OUTPUT )

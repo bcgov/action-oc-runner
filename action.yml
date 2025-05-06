@@ -67,10 +67,11 @@ inputs:
     default: ${{ github.repository }}
     pattern: '^[a-zA-Z0-9-_]+/[a-zA-Z0-9-_]+$'
   ref:
+    # This should usually be empty unless we're overriding the current branch
     description: |
-      The branch, tag or SHA to checkout; omit to use the default branch
+      The branch, tag or SHA to checkout; omit to use the current branch
       Example: main, master, SHA or tag
-    default: ${{ github.event.repository.default_branch }}
+    default: ''
   timeout:
     description: |
       Timeout for commands or cronjob
