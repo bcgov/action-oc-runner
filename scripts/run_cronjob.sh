@@ -87,7 +87,7 @@ check_job_status() {
             log_info "Job is still running..."
         else
             log_warn "Job status unclear, will retry..."
-        }
+        fi
 
         retry_count=$(( retry_count + 1))
         wait_time=$(( wait_time * 2 ))
