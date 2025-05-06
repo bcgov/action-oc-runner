@@ -59,7 +59,7 @@ inputs:
       Override oc version, >= 4.0
       Example: 4.16
     default: '4.14'
-    pattern: '^4\.[0-9]+$'
+    pattern: '^(4\.[0-9]+|latest)$'
   repository:
     description: |
       Optionally, specify a different repo to clone

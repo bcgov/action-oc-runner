@@ -26,7 +26,7 @@ trap cleanup EXIT
 # Input validation
 if [ -z "${1:-}" ]; then
     echo "Run a job from a cronjob"
-    echo "Usage: $0 <cronjobe> <timeout> <cronjob_tail>"
+    echo "Usage: $0 <cronjob> <timeout> <cronjob_tail>"
     exit 1
 fi
 
