@@ -1,7 +1,7 @@
 #!/bin/bash
 
 set -euo pipefail
-
+set -x  # Enable debugging
 # Enhanced logging functions with timestamps
 log_info() { echo "INFO: [$(date +'%Y-%m-%d %H:%M:%S')] $*"; }
 log_error() { echo "ERROR: [$(date +'%Y-%m-%d %H:%M:%S')] $*" >&2; }
