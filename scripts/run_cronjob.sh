@@ -2,9 +2,6 @@
 
 set -euo pipefail
 
-echo "Here! line 5!  Exiting."
-exit 1
-
 # Enhanced logging functions with timestamps
 log_info() { echo "INFO: [$(date +'%Y-%m-%d %H:%M:%S')] $*"; }
 log_error() { echo "ERROR: [$(date +'%Y-%m-%d %H:%M:%S')] $*" >&2; }
