@@ -14,7 +14,7 @@ jobs:
     name: Test Command
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - id: whoami
         uses: ./
         with:
@@ -40,7 +40,7 @@ jobs:
     name: Test Non-Default Repository
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - id: repository
         uses: ./
@@ -74,7 +74,7 @@ jobs:
     name: Test Legacy Binary
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - uses: ./
         with:
           commands: oc version
@@ -89,7 +89,7 @@ jobs:
     name: Test CronJob
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4      
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4      
       - id: cronjob
         uses: ./
         with:
