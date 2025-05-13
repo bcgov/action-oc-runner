@@ -64,7 +64,7 @@ inputs:
     description: |
       Optionally, specify a different repo to clone
       Example: bcgov/openshift-quickstart
-    default: ${{ github.repository }}
+    default: ''
     pattern: '^[a-zA-Z0-9-_]+/[a-zA-Z0-9-_]+$'
   ref:
     # This should usually be empty unless we're overriding the current branch
