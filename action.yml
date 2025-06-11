@@ -162,14 +162,14 @@ runs:
       shell: bash
       run: sleep 3
 
+    # Action repo needs to be present for triggered cronjob scripts or cleanup (using override repo)
+    - if: steps.diff.outputs.triggered == 'true' || github.repository != inputs.repository
+      name: Checkout local repo to make sure action.yml is present
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
     - if: steps.diff.outputs.triggered == 'true' && inputs.cronjob
       id: cronjob
       shell: bash
       run: |
         # Run the cronjob script
         ./scripts/run_cronjob.sh "${{ inputs.cronjob }}" "${{ inputs.timeout }}" "${{ inputs.cronjob_tail }}"
-
-    # Action repo needs to be present for cleanup/tests
-    - if: steps.diff.outputs.triggered == 'true' && github.repository != inputs.repository
-      name: Checkout local repo to make sure action.yml is present
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
