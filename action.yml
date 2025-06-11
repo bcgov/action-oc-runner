@@ -147,7 +147,7 @@ runs:
         echo
 
     - if: steps.diff.outputs.triggered == 'true'
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      uses: actions/checkout@v4
       with:
         repository: ${{ inputs.repository }}
         ref: ${{ inputs.ref }}
@@ -165,7 +165,7 @@ runs:
     # Action repo needs to be present for triggered cronjob scripts or cleanup (using override repo)
     - if: steps.diff.outputs.triggered == 'true' || github.repository != inputs.repository
       name: Checkout local repo to make sure action.yml is present
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      uses: actions/checkout@v4
 
     - if: steps.diff.outputs.triggered == 'true' && inputs.cronjob
       id: cronjob
