@@ -16,7 +16,7 @@ jobs:
     name: OpenShift Cleanup
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: ./
         with:
           commands: oc delete all -l app=${{ github.event.repository.name }}-${{ github.event.number }}
