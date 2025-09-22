@@ -126,51 +126,40 @@ runs:
           rm -f oc.tar.gz
         fi
 
-        # Retry helper for robust network operations
-        retry() {
-          local n=1
+        # Simple retry helper for network operations
+        retry_helper() {
           local max=5
           local delay=15
-          while true; do
-            "$@" && break || {
-              if [[ $n -lt $max ]]; then
-                ((n++))
-                echo "Command failed. Attempt $n/$max:"
-                sleep $delay;
-              else
-                echo "The command has failed after $n attempts."
-                return 1
-              fi
-            }
+          for attempt in $(seq 1 $max); do
+            "$@" && return 0
+            echo "Attempt $attempt failed, retrying in $delay seconds..."
+            sleep $delay
           done
+          echo "Command failed after $max attempts."
+          return 1
         }
 
-        # Retrieve OpenShift service account token with retries
-        get_token() {
-          curl -ksX POST \
-            ${{ inputs.oc_server }}/api/v1/namespaces/${{ inputs.oc_namespace }}/serviceaccounts/pipeline/token \
-            --header "Authorization: Bearer ${{ inputs.oc_token }}" \
-            --header "Content-Type: application/json; charset=utf-8" \
-            --data '{"spec": {"expirationSeconds": 1500 }}' \
-            | jq -r '.status.token'
-        }
-
-        # Attempt login with retries on both token retrieval and oc login
-        for i in {1..5}; do
-          TOKEN=$(retry get_token)
-          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
-            echo "Failed to retrieve service account token (attempt $i/5)."
+        # Retrieve the service account token and login with retry
+        get_token_and_login() {
+          local token
+          for attempt in $(seq 1 5); do
+            token=$(curl -ksX POST \
+              ${{ inputs.oc_server }}/api/v1/namespaces/${{ inputs.oc_namespace }}/serviceaccounts/pipeline/token \
+              --header "Authorization: Bearer ${{ inputs.oc_token }}" \
+              --header "Content-Type: application/json; charset=utf-8" \
+              --data '{"spec": {"expirationSeconds": 1500 }}' | jq -r '.status.token')
+            if [ -n "$token" ] && [ "$token" != "null" ]; then
+              retry_helper oc login --server=${{ inputs.oc_server }} --token="$token" && return 0
+            fi
+            echo "Token retrieval or login failed (attempt $attempt/5), retrying in 15s..."
             sleep 15
-            continue
-          fi
-          if retry oc login --server=${{ inputs.oc_server }} --token="$TOKEN"; then
-            break
-          elif [ "$i" -eq 5 ]; then
-            echo "Failed to login to OpenShift after 5 attempts."
-            exit 1
-          fi
-          sleep 15
-        done
+          done
+          echo "Failed to login after 5 attempts."
+          return 1
+        }
+
+        # Call the function
+        get_token_and_login || exit 1
 
         # Verify namespace
         if [ "$( oc project -q )" != "${{ inputs.oc_namespace }}" ]; then
