@@ -13,7 +13,7 @@ inputs:
       OpenShift namespace
       Example: abc123-dev, abc123-test, abc123-prod
     required: true
-    pattern: '^[a-z0-9]{6}-(dev|test|prod|tools)$'
+    pattern: "^[a-z0-9]{6}-(dev|test|prod|tools)$"
   oc_server:
     description: |
       OpenShift server URL with port
@@ -48,7 +48,7 @@ inputs:
       Example: 100, 200, -1
     default: -1
     # pattern accepts -1 or any non-negative integer
-    pattern: '^(-1|[0-9]+)$'
+    pattern: "^(-1|[0-9]+)$"
   diff_branch:
     description: |
       Branch to diff against
@@ -58,26 +58,26 @@ inputs:
     description: |
       Override oc version, >= 4.0
       Example: 4.16
-    default: '4.14'
+    default: "4.14"
     pattern: '^(4\.[0-9]+|latest)$'
   repository:
     description: |
       Optionally, specify a different repo to clone
       Example: bcgov/openshift-quickstart
-    default: ''
-    pattern: '^[a-zA-Z0-9-_]+/[a-zA-Z0-9-_]+$'
+    default: ""
+    pattern: "^[a-zA-Z0-9-_]+/[a-zA-Z0-9-_]+$"
   ref:
     # This should usually be empty unless we're overriding the current branch
     description: |
       The branch, tag or SHA to checkout; omit to use the current branch
       Example: main, master, SHA or tag
-    default: ''
+    default: ""
   timeout:
     description: |
       Timeout for commands or cronjob
       Example: 10m, 30s, 1h
     default: 10m
-    pattern: '^[0-9]+[mhs]$'
+    pattern: "^[0-9]+[mhs]$"
 
 outputs:
   job-name:
@@ -126,14 +126,51 @@ runs:
           rm -f oc.tar.gz
         fi
 
-        # OpenShift login
-        oc login --server=${{ inputs.oc_server }} --token=$( curl -ksX POST \
-          ${{ inputs.oc_server }}/api/v1/namespaces/${{ inputs.oc_namespace }}/serviceaccounts/pipeline/token \
-          --header "Authorization: Bearer ${{ inputs.oc_token }}" \
-          --header "Content-Type: application/json; charset=utf-8" \
-          --data '{"spec": {"expirationSeconds": 1500 }}' \
-          | jq -r '.status.token' \
-        ) || { echo "Failed to obtain service account token"; exit 1; }
+        # Retry helper for robust network operations
+        retry() {
+          local n=1
+          local max=5
+          local delay=15
+          while true; do
+            "$@" && break || {
+              if [[ $n -lt $max ]]; then
+                ((n++))
+                echo "Command failed. Attempt $n/$max:"
+                sleep $delay;
+              else
+                echo "The command has failed after $n attempts."
+                return 1
+              fi
+            }
+          done
+        }
+
+        # Retrieve OpenShift service account token with retries
+        get_token() {
+          curl -ksX POST \
+            ${{ inputs.oc_server }}/api/v1/namespaces/${{ inputs.oc_namespace }}/serviceaccounts/pipeline/token \
+            --header "Authorization: Bearer ${{ inputs.oc_token }}" \
+            --header "Content-Type: application/json; charset=utf-8" \
+            --data '{"spec": {"expirationSeconds": 1500 }}' \
+            | jq -r '.status.token'
+        }
+
+        # Attempt login with retries on both token retrieval and oc login
+        for i in {1..5}; do
+          TOKEN=$(retry get_token)
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+            echo "Failed to retrieve service account token (attempt $i/5)."
+            sleep 15
+            continue
+          fi
+          if retry oc login --server=${{ inputs.oc_server }} --token="$TOKEN"; then
+            break
+          elif [ "$i" -eq 5 ]; then
+            echo "Failed to login to OpenShift after 5 attempts."
+            exit 1
+          fi
+          sleep 15
+        done
 
         # Verify namespace
         if [ "$( oc project -q )" != "${{ inputs.oc_namespace }}" ]; then
