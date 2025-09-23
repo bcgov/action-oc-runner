@@ -138,6 +138,12 @@ runs:
           sleep 15
         done
 
+        # Verify successful login
+        if ! oc whoami &>/dev/null; then
+          echo "Failed to login after 5 attempts."
+          exit 1
+        fi
+
         # Verify namespace
         if [ "$( oc project -q )" != "${{ inputs.oc_namespace }}" ]; then
           echo "Project and token do not match!"
