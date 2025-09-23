@@ -134,8 +134,8 @@ runs:
             --header "Content-Type: application/json; charset=utf-8" \
             --data '{"spec": {"expirationSeconds": 1500 }}' \
             | jq -r '.status.token') && break
-          echo "Login attempt $attempt failed, retrying in 15 seconds..."
-          sleep 15
+          echo "Login attempt $attempt failed, retrying in $((2 ** attempt)) seconds..."
+          sleep $((2 ** attempt))
         done
 
         # Verify successful login
