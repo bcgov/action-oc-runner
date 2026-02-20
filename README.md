@@ -126,7 +126,7 @@ This action returns:
 - `triggered`: boolean (`'true'` or `'false'`) indicating whether trigger paths changed
 - `commands`: generic command output channel from the `commands` step (usually empty unless explicitly set)
 
-`commands` is expected to be empty in most runs. To populate it, write a `commands=<value>` entry to `$GITHUB_OUTPUT` inside your `commands` input.
+`commands` is expected to be empty in most runs. To populate it, write to `$GITHUB_OUTPUT` inside your `commands` input. Plain text lines are automatically mapped to the `commands` output (you do not need to prefix with `commands=`).
 
 ```yaml
 jobs:
@@ -144,7 +144,7 @@ jobs:
           oc_token: ${{ secrets.OC_TOKEN }}
           commands: |
             oc whoami
-            echo "commands=$(oc whoami)" >> "$GITHUB_OUTPUT"
+            echo "$(oc whoami)" >> "$GITHUB_OUTPUT"
 
   result:
     runs-on: ubuntu-latest

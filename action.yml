@@ -164,8 +164,26 @@ runs:
       id: commands
       shell: bash
       run: |
+        REAL_GITHUB_OUTPUT="$GITHUB_OUTPUT"
+        ACTION_OUTPUT_FILE="$(mktemp)"
+        export GITHUB_OUTPUT="$ACTION_OUTPUT_FILE"
+
         # Run command(s)
         ${{ inputs.commands }}
+
+        # Map user-written output lines to the action's generic commands output.
+        # Allows plain `echo "value" >> "$GITHUB_OUTPUT"` without requiring `commands=`.
+        if [ -s "$ACTION_OUTPUT_FILE" ]; then
+          {
+            echo "commands<<EOF_ACTION_OC_RUNNER_COMMANDS"
+            if grep -q '^commands=' "$ACTION_OUTPUT_FILE"; then
+              sed -n 's/^commands=//p' "$ACTION_OUTPUT_FILE"
+            else
+              cat "$ACTION_OUTPUT_FILE"
+            fi
+            echo "EOF_ACTION_OC_RUNNER_COMMANDS"
+          } >> "$REAL_GITHUB_OUTPUT"
+        fi
 
     - if: steps.diff.outputs.triggered == 'true' && inputs.commands && inputs.cronjob
       shell: bash

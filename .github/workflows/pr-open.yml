@@ -20,7 +20,7 @@ jobs:
         with:
           commands: |
             oc whoami
-            echo "commands=whoami-output-ok" >> "$GITHUB_OUTPUT"
+            echo "whoami-output-ok" >> "$GITHUB_OUTPUT"
           oc_namespace: ${{ vars.oc_namespace }}
           oc_server: ${{ vars.oc_server }}
           oc_token: ${{ secrets.oc_token }}
