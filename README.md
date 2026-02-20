@@ -124,9 +124,9 @@ cronjob:
 This action returns:
 
 - `triggered`: boolean (`'true'` or `'false'`) indicating whether trigger paths changed
-- `commands`: generic command output from the `commands` step
+- `commands`: generic command output channel from the `commands` step (usually empty unless explicitly set)
 
-To populate `commands`, write a `commands=<value>` entry to `$GITHUB_OUTPUT` inside your `commands` input.
+`commands` is expected to be empty in most runs. To populate it, write a `commands=<value>` entry to `$GITHUB_OUTPUT` inside your `commands` input.
 
 ```yaml
 jobs:
