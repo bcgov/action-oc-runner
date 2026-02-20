@@ -121,26 +121,38 @@ cronjob:
 
 # Output
 
-The action will return a boolean (true|false) of whether a this action's triggers have fired. It can be useful for follow-up tasks, like running tests or cronjobs.
+This action returns:
+
+- `triggered`: boolean (`'true'` or `'false'`) indicating whether trigger paths changed
+- `commands`: generic command output from the `commands` step
+
+To populate `commands`, write a `commands=<value>` entry to `$GITHUB_OUTPUT` inside your `commands` input.
 
 ```yaml
 jobs:
   command:
     runs-on: ubuntu-latest
     outputs:
-      triggered: ${{ steps.meaningful_step_name.outputs.triggered }}
+      triggered: ${{ steps.oc.outputs.triggered }}
+      commands: ${{ steps.oc.outputs.commands }}
     steps:
-      - id: meaningful_step_name
+      - id: oc
         uses: bcgov/action-oc-runner@vX.Y.Z
-   ...
+        with:
+          oc_namespace: ${{ vars.oc_namespace }}
+          oc_server: ${{ vars.oc_server }}
+          oc_token: ${{ secrets.OC_TOKEN }}
+          commands: |
+            oc whoami
+            echo "commands=$(oc whoami)" >> "$GITHUB_OUTPUT"
 
   result:
     runs-on: ubuntu-latest
     needs: [command]
     steps:
-      - needs: [command]
-        run: |
-          echo "Triggered = ${{ needs.command.outputs.triggered }}
+      - run: |
+          echo "Triggered = ${{ needs.command.outputs.triggered }}"
+          echo "Command output = ${{ needs.command.outputs.commands }}"
 ```
 
 # Feedback

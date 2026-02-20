@@ -80,6 +80,9 @@ inputs:
     pattern: "^[0-9]+[mhs]$"
 
 outputs:
+  commands:
+    description: Generic output for commands run, useful for debugging
+    value: ${{ steps.commands.outputs.commands }}
   job-name:
     description: Name of the job created from the cronjob param
     value: ${{ steps.cronjob.outputs.job-name }}
@@ -155,6 +158,7 @@ runs:
         ref: ${{ inputs.ref }}
 
     - if: steps.diff.outputs.triggered == 'true' && inputs.commands
+      id: commands
       shell: bash
       run: |
         # Run command(s)
