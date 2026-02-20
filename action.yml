@@ -81,7 +81,10 @@ inputs:
 
 outputs:
   commands:
-    description: Generic output for commands run, useful for debugging
+    description: |
+      Generic output channel for data produced by the commands step.
+      Typically populated via $GITHUB_OUTPUT in the commands step and may be empty
+      if no commands are run or the commands step does not execute.
     value: ${{ steps.commands.outputs.commands }}
   job-name:
     description: Name of the job created from the cronjob param
