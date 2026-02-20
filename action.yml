@@ -167,6 +167,7 @@ runs:
         REAL_GITHUB_OUTPUT="$GITHUB_OUTPUT"
         ACTION_OUTPUT_FILE="$(mktemp)"
         export GITHUB_OUTPUT="$ACTION_OUTPUT_FILE"
+        trap 'rm -f "$ACTION_OUTPUT_FILE"' EXIT
 
         # Run command(s)
         ${{ inputs.commands }}
@@ -174,14 +175,31 @@ runs:
         # Map user-written output lines to the action's generic commands output.
         # Allows plain `echo "value" >> "$GITHUB_OUTPUT"` without requiring `commands=`.
         if [ -s "$ACTION_OUTPUT_FILE" ]; then
+          DELIM="EOF_ACTION_OC_RUNNER_COMMANDS_$(uuidgen 2>/dev/null || cat /proc/sys/kernel/random/uuid 2>/dev/null || echo "${RANDOM}${RANDOM}$$")"
           {
-            echo "commands<<EOF_ACTION_OC_RUNNER_COMMANDS"
+            echo "commands<<$DELIM"
             if grep -q '^commands=' "$ACTION_OUTPUT_FILE"; then
               sed -n 's/^commands=//p' "$ACTION_OUTPUT_FILE"
+            elif grep -q '^commands<<' "$ACTION_OUTPUT_FILE"; then
+              awk '
+                /^commands<</ {
+                  split($0, a, "<<")
+                  tag = a[2]
+                  in_block = 1
+                  next
+                }
+                in_block && $0 == tag {
+                  in_block = 0
+                  exit
+                }
+                in_block {
+                  print
+                }
+              ' "$ACTION_OUTPUT_FILE"
             else
               cat "$ACTION_OUTPUT_FILE"
             fi
-            echo "EOF_ACTION_OC_RUNNER_COMMANDS"
+            echo "$DELIM"
           } >> "$REAL_GITHUB_OUTPUT"
         fi
 
