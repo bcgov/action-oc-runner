@@ -18,7 +18,9 @@ jobs:
       - id: whoami
         uses: ./
         with:
-          commands: oc whoami
+          commands: |
+            oc whoami
+            echo "commands=whoami-output-ok" >> "$GITHUB_OUTPUT"
           oc_namespace: ${{ vars.oc_namespace }}
           oc_server: ${{ vars.oc_server }}
           oc_token: ${{ secrets.oc_token }}
@@ -32,6 +34,10 @@ jobs:
           echo "Outputs: ${{ toJSON(steps.whoami.outputs) }}"
           if [ "${{ steps.whoami.outputs.triggered }}" != "true" ]; then
             echo "Error!  Verify outputs."
+            exit 1
+          fi
+          if [ "${{ steps.whoami.outputs.commands }}" != "whoami-output-ok" ]; then
+            echo "Error! Generic commands output did not match expected value."
             exit 1
           fi
 
