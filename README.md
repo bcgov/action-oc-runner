@@ -165,7 +165,11 @@ The `commands` block runs in strict shell mode. A command failure (including opt
 - For optional matches, use guards like `grep ... || true`
 - Prefer explicit conditional checks when an empty result is valid
 - Set `verbose: true` to enable `set -x` tracing for the `commands` block and internal output processing
-- `debug_commands: true` remains supported as a backward-compatible alias
+- `debug_commands: true` remains supported as a backward-compatible alias (deprecated; prefer `verbose`)
+
+## Safe Debugging
+
+When `verbose: true` is enabled, shell tracing may show expanded command arguments and environment usage in logs. Avoid printing sensitive values directly in commands.
 
 # Feedback
 
