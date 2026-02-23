@@ -197,15 +197,12 @@ runs:
         fi
 
         if [ "$ENABLE_VERBOSE" = "true" ]; then
+          echo "::notice::Verbose mode enabled for commands step (includes internal output processing)."
           set -x
         fi
 
         # Run command(s)
         ${{ inputs.commands }}
-
-        if [ "$ENABLE_VERBOSE" = "true" ]; then
-          set +x
-        fi
 
         trap - ERR
 
@@ -238,6 +235,10 @@ runs:
             fi
             echo "$DELIM"
           } >> "$REAL_GITHUB_OUTPUT"
+        fi
+
+        if [ "$ENABLE_VERBOSE" = "true" ]; then
+          set +x
         fi
 
     - if: steps.diff.outputs.triggered == 'true' && inputs.commands && inputs.cronjob
