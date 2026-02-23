@@ -64,8 +64,8 @@ Provide as few as zero commands to login only.  There is a separate parameter fo
     # Timeout for command or cronjob; e.g. 10m
     timeout: 10m
 
-    # Debug commands with bash xtrace (set -x)
-    debug_commands: false
+    # Enable verbose command tracing with bash xtrace (set -x)
+    verbose: false
 ```
 
 # Example: Login only
@@ -164,7 +164,8 @@ The `commands` block runs in strict shell mode. A command failure (including opt
 
 - For optional matches, use guards like `grep ... || true`
 - Prefer explicit conditional checks when an empty result is valid
-- Set `debug_commands: true` to enable `set -x` tracing for the `commands` block
+- Set `verbose: true` to enable `set -x` tracing for the `commands` block
+- `debug_commands: true` remains supported as a backward-compatible alias
 
 # Feedback
 
