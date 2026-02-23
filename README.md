@@ -63,6 +63,9 @@ Provide as few as zero commands to login only.  There is a separate parameter fo
 
     # Timeout for command or cronjob; e.g. 10m
     timeout: 10m
+
+    # Enable verbose command tracing with bash xtrace (set -x)
+    verbose: false
 ```
 
 # Example: Login only
@@ -154,6 +157,18 @@ jobs:
           echo "Triggered = ${{ needs.command.outputs.triggered }}"
           echo "Command output = ${{ needs.command.outputs.commands }}"
 ```
+
+# Troubleshooting
+
+The `commands` block runs in strict shell mode. A command failure (including optional `grep` misses in pipelines) can stop the step immediately.
+
+- For optional matches, use guards like `grep ... || true`
+- Prefer explicit conditional checks when an empty result is valid
+- Set `verbose: true` to enable `set -x` tracing for the `commands` block and internal output processing; enable it temporarily and only when you are confident sensitive values will not be printed
+
+## Safe Debugging
+
+When `verbose: true` is enabled, shell tracing may show expanded command arguments, environment usage, and command output in logs. GitHub masks known secrets, but derived or partial secret values can still leak. Use this mode only for short-lived troubleshooting and avoid commands that print or interpolate sensitive values.
 
 # Feedback
 
