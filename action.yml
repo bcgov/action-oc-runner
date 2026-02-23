@@ -84,11 +84,6 @@ inputs:
       Example: true, false
     default: "false"
     pattern: "^(true|false)$"
-  debug_commands:
-    description: |
-      Deprecated alias for `verbose`; kept for backward compatibility
-    default: "false"
-    pattern: "^(true|false)$"
 
 outputs:
   commands:
@@ -192,9 +187,6 @@ runs:
         trap 'rm -f "$ACTION_OUTPUT_FILE"' EXIT
 
         ENABLE_VERBOSE="${{ inputs.verbose }}"
-        if [ "$ENABLE_VERBOSE" != "true" ] && [ "${{ inputs.debug_commands }}" = "true" ]; then
-          ENABLE_VERBOSE="true"
-        fi
 
         if [ "$ENABLE_VERBOSE" = "true" ]; then
           echo "::notice::Verbose mode enabled for commands step (includes internal output processing)."
