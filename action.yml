@@ -171,11 +171,21 @@ runs:
       shell: bash
       run: |
         set -eEuo pipefail
+        ACTION_SOURCE="bcgov/action-oc-runner"
 
         on_commands_error() {
           exit_code=$?
-          echo "::error title=commands input failed::commands block failed with exit code ${exit_code}."
-          echo "::error::If optional grep/pipeline failures are expected, guard them with '|| true' or explicit condition checks."
+          echo "::error title=${ACTION_SOURCE}: commands input failed::[${ACTION_SOURCE}] commands block failed with exit code ${exit_code}."
+          echo "::error::[${ACTION_SOURCE}] If optional grep/pipeline failures are expected, guard them with '|| true' or explicit condition checks."
+          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+            {
+              echo "### ${ACTION_SOURCE} failure"
+              echo
+              echo "- Component: commands input"
+              echo "- Exit code: ${exit_code}"
+              echo "- Hint: if optional grep/pipeline failures are expected, guard with \`|| true\` or explicit condition checks"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
           exit "$exit_code"
         }
 
@@ -187,7 +197,7 @@ runs:
         ENABLE_VERBOSE="${{ inputs.verbose }}"
 
         if [ "$ENABLE_VERBOSE" = "true" ]; then
-          echo "::notice::Verbose mode enabled for commands step (includes internal output processing)."
+          echo "::notice::[${ACTION_SOURCE}] Verbose mode enabled for commands step (includes internal output processing)."
           set -x
         fi
 
