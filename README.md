@@ -63,6 +63,9 @@ Provide as few as zero commands to login only.  There is a separate parameter fo
 
     # Timeout for command or cronjob; e.g. 10m
     timeout: 10m
+
+    # Debug commands with bash xtrace (set -x)
+    debug_commands: false
 ```
 
 # Example: Login only
@@ -154,6 +157,14 @@ jobs:
           echo "Triggered = ${{ needs.command.outputs.triggered }}"
           echo "Command output = ${{ needs.command.outputs.commands }}"
 ```
+
+# Troubleshooting
+
+The `commands` block runs in strict shell mode. A command failure (including optional `grep` misses in pipelines) can stop the step immediately.
+
+- For optional matches, use guards like `grep ... || true`
+- Prefer explicit conditional checks when an empty result is valid
+- Set `debug_commands: true` to enable `set -x` tracing for the `commands` block
 
 # Feedback
 

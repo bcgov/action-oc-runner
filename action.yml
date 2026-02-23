@@ -78,6 +78,12 @@ inputs:
       Example: 10m, 30s, 1h
     default: 10m
     pattern: "^[0-9]+[mhs]$"
+  debug_commands:
+    description: |
+      Enable bash xtrace (`set -x`) for commands input debugging
+      Example: true, false
+    default: "false"
+    pattern: "^(true|false)$"
 
 outputs:
   commands:
@@ -164,10 +170,23 @@ runs:
       id: commands
       shell: bash
       run: |
+        on_commands_error() {
+          exit_code=$?
+          echo "::error title=commands input failed::commands block failed with exit code ${exit_code}."
+          echo "::error::If optional grep/pipeline failures are expected, guard them with '|| true' or explicit condition checks."
+          exit "$exit_code"
+        }
+
+        trap on_commands_error ERR
+
         REAL_GITHUB_OUTPUT="$GITHUB_OUTPUT"
         ACTION_OUTPUT_FILE="$(mktemp)"
         export GITHUB_OUTPUT="$ACTION_OUTPUT_FILE"
         trap 'rm -f "$ACTION_OUTPUT_FILE"' EXIT
+
+        if [ "${{ inputs.debug_commands }}" = "true" ]; then
+          set -x
+        fi
 
         # Run command(s)
         ${{ inputs.commands }}
