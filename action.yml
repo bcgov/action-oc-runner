@@ -175,6 +175,7 @@ runs:
 
         on_commands_error() {
           exit_code=$?
+          set +x
           echo "::error title=${ACTION_SOURCE}: commands input failed::[${ACTION_SOURCE}] commands block failed with exit code ${exit_code}."
           echo "::error::[${ACTION_SOURCE}] If optional grep/pipeline failures are expected, guard them with '|| true' or explicit condition checks."
           if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
