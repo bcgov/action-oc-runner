@@ -164,11 +164,11 @@ The `commands` block runs in strict shell mode. A command failure (including opt
 
 - For optional matches, use guards like `grep ... || true`
 - Prefer explicit conditional checks when an empty result is valid
-- Set `verbose: true` to enable `set -x` tracing for the `commands` block and internal output processing
+- Set `verbose: true` to enable `set -x` tracing for the `commands` block and internal output processing; enable it temporarily and only when you are confident sensitive values will not be printed
 
 ## Safe Debugging
 
-When `verbose: true` is enabled, shell tracing may show expanded command arguments and environment usage in logs. Avoid printing sensitive values directly in commands.
+When `verbose: true` is enabled, shell tracing may show expanded command arguments, environment usage, and command output in logs. GitHub masks known secrets, but derived or partial secret values can still leak. Use this mode only for short-lived troubleshooting and avoid commands that print or interpolate sensitive values.
 
 # Feedback
 

@@ -179,8 +179,6 @@ runs:
           exit "$exit_code"
         }
 
-        trap on_commands_error ERR
-
         REAL_GITHUB_OUTPUT="$GITHUB_OUTPUT"
         ACTION_OUTPUT_FILE="$(mktemp)"
         export GITHUB_OUTPUT="$ACTION_OUTPUT_FILE"
@@ -192,6 +190,8 @@ runs:
           echo "::notice::Verbose mode enabled for commands step (includes internal output processing)."
           set -x
         fi
+
+        trap on_commands_error ERR
 
         # Run command(s)
         ${{ inputs.commands }}
