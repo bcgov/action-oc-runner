@@ -170,6 +170,8 @@ runs:
       id: commands
       shell: bash
       run: |
+        set -eEuo pipefail
+
         on_commands_error() {
           exit_code=$?
           echo "::error title=commands input failed::commands block failed with exit code ${exit_code}."
@@ -190,6 +192,12 @@ runs:
 
         # Run command(s)
         ${{ inputs.commands }}
+
+        if [ "${{ inputs.debug_commands }}" = "true" ]; then
+          set +x
+        fi
+
+        trap - ERR
 
         # Map user-written output lines to the action's generic commands output.
         # Allows plain `echo "value" >> "$GITHUB_OUTPUT"` without requiring `commands=`.
