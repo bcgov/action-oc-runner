@@ -78,6 +78,9 @@ inputs:
       Example: 10m, 30s, 1h
     default: 10m
     pattern: "^[0-9]+[mhs]$"
+  token:
+    description: Specify token (GH or PAT), instead of inheriting one from the calling workflow
+    default: ${{ github.token }}
   verbose:
     description: |
       Enable bash xtrace (`set -x`) for commands input debugging
@@ -163,7 +166,7 @@ runs:
     - if: steps.diff.outputs.triggered == 'true'
       uses: actions/checkout@v6
       with:
-        token: ${{ github.token }}
+        token: ${{ inputs.token }}
         repository: ${{ inputs.repository }}
         ref: ${{ inputs.ref }}
 
@@ -254,7 +257,7 @@ runs:
       name: Checkout local repo to make sure action.yml is present
       uses: actions/checkout@v6
       with:
-        token: ${{ github.token }}
+        token: ${{ inputs.token }}
 
     - if: steps.diff.outputs.triggered == 'true' && inputs.cronjob
       id: cronjob
