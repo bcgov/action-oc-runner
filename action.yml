@@ -78,7 +78,7 @@ inputs:
       Example: 10m, 30s, 1h
     default: 10m
     pattern: "^[0-9]+[mhs]$"
-  token:
+  github_token:
     description: Specify token (GH or PAT), instead of inheriting one from the calling workflow
     default: ${{ github.token }}
   verbose:
@@ -108,7 +108,7 @@ runs:
   steps:
     # Send triggers to diff action
     - id: diff
-      uses: bcgov/action-diff-triggers@9be6baaf718f92cfa66c89fe6d286207d5bba8f1 # v1.2.0
+      uses: bcgov/action-diff-triggers@a80e4b3cf77b7e05f84e74030e3bfa08b717a574 # v1.2.1
       with:
         triggers: ${{ inputs.triggers }}
         ref: ${{ inputs.diff_branch }}
@@ -166,7 +166,7 @@ runs:
     - if: steps.diff.outputs.triggered == 'true'
       uses: actions/checkout@v6
       with:
-        token: ${{ inputs.token }}
+        token: ${{ inputs.github_token }}
         repository: ${{ inputs.repository }}
         ref: ${{ inputs.ref }}
 
@@ -257,7 +257,7 @@ runs:
       name: Checkout local repo to make sure action.yml is present
       uses: actions/checkout@v6
       with:
-        token: ${{ inputs.token }}
+        token: ${{ inputs.github_token }}
 
     - if: steps.diff.outputs.triggered == 'true' && inputs.cronjob
       id: cronjob
