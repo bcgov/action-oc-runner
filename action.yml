@@ -78,7 +78,7 @@ inputs:
       Example: 10m, 30s, 1h
     default: 10m
     pattern: "^[0-9]+[mhs]$"
-  token:
+  github_token:
     description: Specify token (GH or PAT), instead of inheriting one from the calling workflow
     default: ${{ github.token }}
   verbose:
@@ -166,7 +166,7 @@ runs:
     - if: steps.diff.outputs.triggered == 'true'
       uses: actions/checkout@v6
       with:
-        token: ${{ inputs.token }}
+        token: ${{ inputs.github_token }}
         repository: ${{ inputs.repository }}
         ref: ${{ inputs.ref }}
 
@@ -257,7 +257,7 @@ runs:
       name: Checkout local repo to make sure action.yml is present
       uses: actions/checkout@v6
       with:
-        token: ${{ inputs.token }}
+        token: ${{ inputs.github_token }}
 
     - if: steps.diff.outputs.triggered == 'true' && inputs.cronjob
       id: cronjob
