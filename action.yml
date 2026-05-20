@@ -108,7 +108,7 @@ runs:
   steps:
     # Send triggers to diff action
     - id: diff
-      uses: bcgov/action-diff-triggers@9be6baaf718f92cfa66c89fe6d286207d5bba8f1 # v1.2.0
+      uses: bcgov/action-diff-triggers@a80e4b3cf77b7e05f84e74030e3bfa08b717a574 # v1.2.1
       with:
         triggers: ${{ inputs.triggers }}
         ref: ${{ inputs.diff_branch }}
