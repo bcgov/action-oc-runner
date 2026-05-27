@@ -41,7 +41,7 @@ jobs:
             exit 1
           fi
           
-        - run: |
+      - run: |
           # Test failure
           echo "Fail!"
           exit 1
