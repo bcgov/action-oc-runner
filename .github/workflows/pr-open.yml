@@ -40,7 +40,11 @@ jobs:
             echo "Error! Generic commands output did not match expected value."
             exit 1
           fi
-
+          
+        - run: |
+          # Test failure
+          echo "Fail!"
+          exit 1
 
   repository:
     name: Test Non-Default Repository
