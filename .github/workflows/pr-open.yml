@@ -10,18 +10,8 @@ concurrency:
 permissions: {}
 
 jobs:
-  junk:
-    name: Junk
-    runs-on: ubuntu-22.04
-    steps:    
-      - run: |
-          # Test failure
-          echo "Fail!"
-          exit 1
-
   whoami:
     name: Test Command
-    needs: [junk]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
