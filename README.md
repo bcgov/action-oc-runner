@@ -165,8 +165,8 @@ jobs:
 
 To handle transient network drops, cluster API restarts, or runner configuration mistakes, the action implements validation gates and retry logic:
 - **Early Input Validation:** Before executing any login attempts or downloading tools, the action validates that `oc_server`, `oc_namespace`, and `oc_token` are populated and that the server URL is properly formatted. If inputs are missing or malformed, the action fails fast immediately to prevent useless retries.
-- **Fail Fast:** If the OpenShift API returns an HTTP `401 Unauthorized` or `403 Forbidden` (invalid credentials or misconfigured service account), the action aborts immediately on the first attempt to save runner billing minutes.
-- **Retry on Timeout:** If the connection times out or fails at the TCP layer (HTTP status `000`), the action sleeps with exponential backoff (starting at 2 seconds) and retries up to `login_attempts` times.
+- **Fail Fast:** If the OpenShift API returns a non-retryable client error (such as `401 Unauthorized`, `403 Forbidden`, or `404 Not Found`), the action aborts immediately on the first attempt to save runner billing minutes.
+- **Retry:** If the connection times out at the network layer (HTTP status `000`), hits a request timeout (`408`), gets rate-limited (`429`), or if the API returns a transient server error (HTTP status `5xx` during control-plane reboots), the action sleeps with exponential backoff (starting at 2 seconds) and retries up to `login_attempts` times.
 - **CLI Download Timeout:** Download of the `oc` CLI client archive from `mirror.openshift.com` is capped with a 15-second timeout and 3 retry attempts to prevent workflows from hanging indefinitely.
 
 # Troubleshooting
