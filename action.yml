@@ -125,6 +125,29 @@ runs:
       shell: bash
       working-directory: /usr/local/bin
       run: |
+        # Input validation gate
+        SERVER_URL="${{ inputs.oc_server }}"
+        NAMESPACE="${{ inputs.oc_namespace }}"
+        TOKEN_INPUT="${{ inputs.oc_token }}"
+        ATTEMPTS="${{ inputs.login_attempts }}"
+
+        if [ -z "${SERVER_URL}" ] || [[ ! "${SERVER_URL}" =~ ^https?:// ]]; then
+          echo "::error::Invalid or missing oc_server. Must start with http:// or https://"
+          exit 1
+        fi
+        if [ -z "${NAMESPACE}" ]; then
+          echo "::error::Missing oc_namespace."
+          exit 1
+        fi
+        if [ -z "${TOKEN_INPUT}" ]; then
+          echo "::error::Missing oc_token."
+          exit 1
+        fi
+        if ! [[ "${ATTEMPTS}" =~ ^[1-9][0-9]*$ ]]; then
+          echo "::error::Invalid login_attempts: '${ATTEMPTS}'. Must be a positive integer."
+          exit 1
+        fi
+
         # Install CLI Tool and Login
         # Check if oc is already installed
         if ! command -v oc &>/dev/null; then
@@ -146,26 +169,7 @@ runs:
           rm -f oc.tar.gz
         fi
 
-        # Input validation gate
-        SERVER_URL="${{ inputs.oc_server }}"
-        NAMESPACE="${{ inputs.oc_namespace }}"
-        TOKEN_INPUT="${{ inputs.oc_token }}"
-
-        if [ -z "${SERVER_URL}" ] || [[ ! "${SERVER_URL}" =~ ^https?:// ]]; then
-          echo "::error::Invalid or missing oc_server. Must start with http:// or https://"
-          exit 1
-        fi
-        if [ -z "${NAMESPACE}" ]; then
-          echo "::error::Missing oc_namespace."
-          exit 1
-        fi
-        if [ -z "${TOKEN_INPUT}" ]; then
-          echo "::error::Missing oc_token."
-          exit 1
-        fi
-
         # OpenShift login with smart retry
-        ATTEMPTS=${{ inputs.login_attempts }}
         DELAY=2
         SA_TOKEN_URL="${SERVER_URL}/api/v1/namespaces/${NAMESPACE}/serviceaccounts/pipeline/token"
 
@@ -189,7 +193,7 @@ runs:
 
           # Success path: try to log in
           if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
-            TOKEN=$(echo "$BODY" | jq -r '.status.token' 2>/dev/null)
+            TOKEN=$(echo "$BODY" | jq -r '.status.token' 2>/dev/null || true)
             if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
               echo "Error: Failed to parse token from response."
             elif OC_OUT=$(oc login --server="${SERVER_URL}" --token="${TOKEN}" 2>&1); then
