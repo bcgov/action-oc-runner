@@ -43,6 +43,7 @@ jobs:
 
   repository:
     name: Test Non-Default Repository
+    needs: whoami
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
@@ -67,7 +68,8 @@ jobs:
           timeout: 1m
           triggers: ('.github/' 'action.yml')
 
-      - run: |
+      - if: steps.repository.outputs.triggered != 'false'
+        run: |
           # Verify outputs
           echo "Outputs: ${{ toJSON(steps.repository.outputs) }}"
           if [ "${{ steps.repository.outputs.triggered }}" != "true" ]; then
@@ -77,6 +79,7 @@ jobs:
 
   legacy:
     name: Test Legacy Binary
+    needs: repository
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
@@ -92,6 +95,7 @@ jobs:
 
   cronjob:
     name: Test CronJob
+    needs: legacy
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6      
@@ -119,6 +123,7 @@ jobs:
 
   test-failures:
     name: Test Failure Scenarios
+    needs: cronjob
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
