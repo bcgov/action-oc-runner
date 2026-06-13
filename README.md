@@ -66,6 +66,9 @@ Provide as few as zero commands to login only.  There is a separate parameter fo
 
     # Enable verbose command tracing with bash xtrace (set -x)
     verbose: false
+
+    # Maximum number of connection retry attempts for logging into OpenShift
+    login_attempts: 5
 ```
 
 # Example: Login only
@@ -157,6 +160,12 @@ jobs:
           echo "Triggered = ${{ needs.command.outputs.triggered }}"
           echo "Command output = ${{ needs.command.outputs.commands }}"
 ```
+
+# OpenShift Login Retry and Fail-Fast Behavior
+
+To handle transient network drops or cluster API restarts (e.g. during cluster maintenance/updates), the action implements smart retry logic when acquiring the pipeline service account token:
+- **Fail Fast:** If the OpenShift API returns an HTTP `401 Unauthorized` or `403 Forbidden` (invalid credentials or misconfigured service account), the action aborts immediately on the first attempt to save runner billing minutes.
+- **Retry on Timeout:** If the connection times out or fails at the TCP layer (HTTP status `000`), the action sleeps with exponential backoff (starting at 2 seconds) and retries up to `login_attempts` times.
 
 # Troubleshooting
 

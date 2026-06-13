@@ -92,13 +92,7 @@ inputs:
       Maximum number of connection retry attempts for logging into OpenShift
       Example: 5, 10
     default: "5"
-    pattern: "^[0-9]+$"
-  login_retry_delay:
-    description: |
-      Initial sleep delay in seconds for connection retries, using exponential backoff
-      Example: 2, 5
-    default: "2"
-    pattern: "^[0-9]+$"
+    pattern: "^[1-9][0-9]*$"
 
 outputs:
   commands:
@@ -154,7 +148,7 @@ runs:
 
         # OpenShift login with smart retry
         ATTEMPTS=${{ inputs.login_attempts }}
-        DELAY=${{ inputs.login_retry_delay }}
+        DELAY=2
         SERVER_URL="${{ inputs.oc_server }}"
         NAMESPACE="${{ inputs.oc_namespace }}"
         SA_TOKEN_URL="${SERVER_URL}/api/v1/namespaces/${NAMESPACE}/serviceaccounts/pipeline/token"
@@ -164,7 +158,7 @@ runs:
           echo "Attempting to acquire token (Attempt $attempt/$ATTEMPTS)..."
           
           # Fetch token response with HTTP code directly to memory
-          RESPONSE=$(curl -ksS -w "%{http_code}" -X POST "${SA_TOKEN_URL}" \
+          RESPONSE=$(curl -ksS --connect-timeout 10 --max-time 30 -w "%{http_code}" -X POST "${SA_TOKEN_URL}" \
             --header "Authorization: Bearer ${{ inputs.oc_token }}" \
             --header "Content-Type: application/json; charset=utf-8" \
             --data '{"spec": {"expirationSeconds": 1500 }}' 2>/dev/null) || true
@@ -180,7 +174,9 @@ runs:
           # Success path: try to log in
           if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
             TOKEN=$(echo "$BODY" | jq -r '.status.token' 2>/dev/null)
-            if OC_OUT=$(oc login --server="${SERVER_URL}" --token="${TOKEN}" 2>&1); then
+            if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+              echo "Error: Failed to parse token from response."
+            elif OC_OUT=$(oc login --server="${SERVER_URL}" --token="${TOKEN}" 2>&1); then
               echo "Login successful!"
               break
             else
@@ -192,7 +188,7 @@ runs:
           # Rejection / Client error path: fail fast
           else
             echo "::error::API request failed with HTTP $HTTP_CODE. Failing fast."
-            echo "Response body: $BODY"
+            echo "Response body: $(echo "$BODY" | sed -E 's/("token"[[:space:]]*:[[:space:]]*")[^"]+/\1***REDACTED***/g')"
             exit 1
           fi
 

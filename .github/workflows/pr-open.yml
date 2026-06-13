@@ -120,6 +120,7 @@ jobs:
   test-failures:
     name: Test Failure Scenarios
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v6
 
@@ -133,11 +134,11 @@ jobs:
           oc_server: https://api.nonexistent.devops.gov.bc.ca:6443
           oc_token: ${{ secrets.oc_token }}
           login_attempts: 2
-          login_retry_delay: 1
           timeout: 1m
           triggers: ('.github/' 'action.yml')
 
       - name: Verify wrong server outcome
+        if: steps.test-wrong-server.outputs.triggered != 'false'
         run: |
           echo "Wrong server step outcome: ${{ steps.test-wrong-server.outcome }}"
           if [ "${{ steps.test-wrong-server.outcome }}" != "failure" ]; then
@@ -155,11 +156,11 @@ jobs:
           oc_server: ${{ vars.oc_server }}
           oc_token: invalidtokeninvalidtokeninvalidtokeninvalidtoken
           login_attempts: 3
-          login_retry_delay: 2
           timeout: 1m
           triggers: ('.github/' 'action.yml')
 
       - name: Verify wrong token outcome
+        if: steps.test-wrong-token.outputs.triggered != 'false'
         run: |
           echo "Wrong token step outcome: ${{ steps.test-wrong-token.outcome }}"
           if [ "${{ steps.test-wrong-token.outcome }}" != "failure" ]; then
