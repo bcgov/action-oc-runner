@@ -131,8 +131,8 @@ runs:
           URL="https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${OC}/openshift-client-linux.tar.gz"
           echo "Downloading OpenShift CLI from ${URL}..."
 
-          # Download the archive
-          if ! wget "${URL}" -qO oc.tar.gz; then
+          # Download the archive with timeout limits
+          if ! wget --timeout=15 --tries=3 "${URL}" -qO oc.tar.gz; then
             echo "Error: Failed to download OpenShift CLI"
             exit 1
           fi
@@ -146,11 +146,27 @@ runs:
           rm -f oc.tar.gz
         fi
 
+        # Input validation gate
+        SERVER_URL="${{ inputs.oc_server }}"
+        NAMESPACE="${{ inputs.oc_namespace }}"
+        TOKEN_INPUT="${{ inputs.oc_token }}"
+
+        if [ -z "${SERVER_URL}" ] || [[ ! "${SERVER_URL}" =~ ^https?:// ]]; then
+          echo "::error::Invalid or missing oc_server. Must start with http:// or https://"
+          exit 1
+        fi
+        if [ -z "${NAMESPACE}" ]; then
+          echo "::error::Missing oc_namespace."
+          exit 1
+        fi
+        if [ -z "${TOKEN_INPUT}" ]; then
+          echo "::error::Missing oc_token."
+          exit 1
+        fi
+
         # OpenShift login with smart retry
         ATTEMPTS=${{ inputs.login_attempts }}
         DELAY=2
-        SERVER_URL="${{ inputs.oc_server }}"
-        NAMESPACE="${{ inputs.oc_namespace }}"
         SA_TOKEN_URL="${SERVER_URL}/api/v1/namespaces/${NAMESPACE}/serviceaccounts/pipeline/token"
 
         attempt=1
@@ -159,7 +175,7 @@ runs:
           
           # Fetch token response with HTTP code directly to memory
           RESPONSE=$(curl -ksS --connect-timeout 10 --max-time 30 -w "%{http_code}" -X POST "${SA_TOKEN_URL}" \
-            --header "Authorization: Bearer ${{ inputs.oc_token }}" \
+            --header "Authorization: Bearer ${TOKEN_INPUT}" \
             --header "Content-Type: application/json; charset=utf-8" \
             --data '{"spec": {"expirationSeconds": 1500 }}' 2>/dev/null) || true
 
@@ -188,7 +204,8 @@ runs:
           # Rejection / Client error path: fail fast
           else
             echo "::error::API request failed with HTTP $HTTP_CODE. Failing fast."
-            echo "Response body: $(echo "$BODY" | sed -E 's/("token"[[:space:]]*:[[:space:]]*")[^"]+/\1***REDACTED***/g')"
+            TRUNCATED_BODY=$(echo -n "$BODY" | head -c 500)
+            echo "Response body: $(echo "$TRUNCATED_BODY" | sed -E 's/("token"[[:space:]]*:[[:space:]]*")[^"]+/\1***REDACTED***/g')"
             exit 1
           fi
 
