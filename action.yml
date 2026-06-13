@@ -87,6 +87,18 @@ inputs:
       Example: true, false
     default: "false"
     pattern: "^(true|false)$"
+  login_attempts:
+    description: |
+      Maximum number of connection retry attempts for logging into OpenShift
+      Example: 5, 10
+    default: "5"
+    pattern: "^[0-9]+$"
+  login_retry_delay:
+    description: |
+      Initial sleep delay in seconds for connection retries, using exponential backoff
+      Example: 2, 5
+    default: "2"
+    pattern: "^[0-9]+$"
 
 outputs:
   commands:
@@ -140,16 +152,59 @@ runs:
           rm -f oc.tar.gz
         fi
 
-        # OpenShift login with retry
-        for attempt in {1..5}; do
-          oc login --server=${{ inputs.oc_server }} --token=$(curl -ksX POST \
-            ${{ inputs.oc_server }}/api/v1/namespaces/${{ inputs.oc_namespace }}/serviceaccounts/pipeline/token \
+        # OpenShift login with smart retry
+        ATTEMPTS=${{ inputs.login_attempts }}
+        DELAY=${{ inputs.login_retry_delay }}
+        SERVER_URL="${{ inputs.oc_server }}"
+        NAMESPACE="${{ inputs.oc_namespace }}"
+        SA_TOKEN_URL="${SERVER_URL}/api/v1/namespaces/${NAMESPACE}/serviceaccounts/pipeline/token"
+
+        attempt=1
+        while [ $attempt -le $ATTEMPTS ]; do
+          echo "Attempting to acquire token (Attempt $attempt/$ATTEMPTS)..."
+          
+          # Fetch token response with HTTP code directly to memory
+          RESPONSE=$(curl -ksS -w "%{http_code}" -X POST "${SA_TOKEN_URL}" \
             --header "Authorization: Bearer ${{ inputs.oc_token }}" \
             --header "Content-Type: application/json; charset=utf-8" \
-            --data '{"spec": {"expirationSeconds": 1500 }}' \
-            | jq -r '.status.token') && break
-          echo "Login attempt $attempt failed, retrying in $((2 ** attempt)) seconds..."
-          sleep $((2 ** attempt))
+            --data '{"spec": {"expirationSeconds": 1500 }}' 2>/dev/null) || true
+
+          # Extract HTTP code and response body in memory
+          HTTP_CODE="000"
+          BODY=""
+          if [ ${#RESPONSE} -ge 3 ]; then
+            HTTP_CODE="${RESPONSE: -3}"
+            BODY="${RESPONSE:0:${#RESPONSE}-3}"
+          fi
+
+          # Success path: try to log in
+          if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
+            TOKEN=$(echo "$BODY" | jq -r '.status.token' 2>/dev/null)
+            if OC_OUT=$(oc login --server="${SERVER_URL}" --token="${TOKEN}" 2>&1); then
+              echo "Login successful!"
+              break
+            else
+              echo "Token acquired, but 'oc login' failed. Error: $OC_OUT"
+            fi
+          # Timeout / Connection failure path: retry
+          elif [ "$HTTP_CODE" = "000" ]; then
+            echo "Connection timed out. Retrying..."
+          # Rejection / Client error path: fail fast
+          else
+            echo "::error::API request failed with HTTP $HTTP_CODE. Failing fast."
+            echo "Response body: $BODY"
+            exit 1
+          fi
+
+          if [ $attempt -eq $ATTEMPTS ]; then
+            echo "::error::Failed to log in to OpenShift after $ATTEMPTS attempts."
+            exit 1
+          fi
+
+          echo "Login attempt $attempt failed, retrying in $DELAY seconds..."
+          sleep $DELAY
+          DELAY=$((DELAY * 2))
+          attempt=$((attempt + 1))
         done
 
         # Verify namespace
