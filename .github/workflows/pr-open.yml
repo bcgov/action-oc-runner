@@ -43,6 +43,7 @@ jobs:
 
   repository:
     name: Test Non-Default Repository
+    needs: whoami
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
@@ -67,7 +68,8 @@ jobs:
           timeout: 1m
           triggers: ('.github/' 'action.yml')
 
-      - run: |
+      - if: steps.repository.outputs.triggered != 'false'
+        run: |
           # Verify outputs
           echo "Outputs: ${{ toJSON(steps.repository.outputs) }}"
           if [ "${{ steps.repository.outputs.triggered }}" != "true" ]; then
@@ -77,6 +79,7 @@ jobs:
 
   legacy:
     name: Test Legacy Binary
+    needs: repository
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
@@ -92,6 +95,7 @@ jobs:
 
   cronjob:
     name: Test CronJob
+    needs: legacy
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6      
@@ -117,6 +121,58 @@ jobs:
             exit 1
           fi
 
+  test-failures:
+    name: Test Failure Scenarios
+    needs: cronjob
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+
+      # 1. Test wrong server (should retry and fail)
+      - id: test-wrong-server
+        uses: ./
+        continue-on-error: true
+        with:
+          commands: oc whoami
+          oc_namespace: ${{ vars.oc_namespace }}
+          oc_server: https://api.nonexistent.devops.gov.bc.ca:6443
+          oc_token: ${{ secrets.oc_token }}
+          login_attempts: 2
+          timeout: 1m
+          triggers: ('.github/' 'action.yml')
+
+      - name: Verify wrong server outcome
+        if: steps.test-wrong-server.outputs.triggered != 'false'
+        run: |
+          echo "Wrong server step outcome: ${{ steps.test-wrong-server.outcome }}"
+          if [ "${{ steps.test-wrong-server.outcome }}" != "failure" ]; then
+            echo "Error: Wrong server step did not fail as expected."
+            exit 1
+          fi
+
+      # 2. Test wrong token (should fail fast)
+      - id: test-wrong-token
+        uses: ./
+        continue-on-error: true
+        with:
+          commands: oc whoami
+          oc_namespace: ${{ vars.oc_namespace }}
+          oc_server: ${{ vars.oc_server }}
+          oc_token: invalidtokeninvalidtokeninvalidtokeninvalidtoken
+          login_attempts: 3
+          timeout: 1m
+          triggers: ('.github/' 'action.yml')
+
+      - name: Verify wrong token outcome
+        if: steps.test-wrong-token.outputs.triggered != 'false'
+        run: |
+          echo "Wrong token step outcome: ${{ steps.test-wrong-token.outcome }}"
+          if [ "${{ steps.test-wrong-token.outcome }}" != "failure" ]; then
+            echo "Error: Wrong token step did not fail as expected."
+            exit 1
+          fi
+
   # ==========================================================================
   # WARNING: This job acts as the required merge gate for this workflow.
   # If you add a new job to this workflow, you MUST add its ID to the 'needs'
@@ -124,7 +180,7 @@ jobs:
   # ==========================================================================
   results:
     name: PR Results
-    needs: [whoami, repository, legacy, cronjob]
+    needs: [whoami, repository, legacy, cronjob, test-failures]
     if: always()
     runs-on: ubuntu-24.04
     timeout-minutes: 1
