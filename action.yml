@@ -148,6 +148,12 @@ runs:
           exit 1
         fi
 
+        # Early jq validation
+        if ! command -v jq &>/dev/null; then
+          echo "::error::jq is required but not installed in the runner environment."
+          exit 1
+        fi
+
         # Install CLI Tool and Login
         # Check if oc is already installed
         if ! command -v oc &>/dev/null; then
@@ -155,8 +161,18 @@ runs:
           echo "Downloading OpenShift CLI from ${URL}..."
 
           # Download the archive with timeout limits
-          if ! wget --timeout=15 --tries=3 "${URL}" -qO oc.tar.gz; then
-            echo "Error: Failed to download OpenShift CLI"
+          if command -v wget &>/dev/null; then
+            if ! wget --timeout=15 --tries=3 "${URL}" -qO oc.tar.gz; then
+              echo "Error: Failed to download OpenShift CLI"
+              exit 1
+            fi
+          elif command -v curl &>/dev/null; then
+            if ! curl -fsSL --connect-timeout 15 --retry 3 "${URL}" -o oc.tar.gz; then
+              echo "Error: Failed to download OpenShift CLI"
+              exit 1
+            fi
+          else
+            echo "::error::Neither wget nor curl is installed. Cannot download OpenShift CLI."
             exit 1
           fi
 
