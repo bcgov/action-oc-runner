@@ -119,6 +119,13 @@ runs:
         triggers: ${{ inputs.triggers }}
         ref: ${{ inputs.diff_branch }}
 
+    - name: Cache OpenShift CLI
+      if: steps.diff.outputs.triggered == 'true'
+      uses: actions/cache@v4
+      with:
+        path: /usr/local/bin/oc
+        key: oc-cli-${{ inputs.oc_version == 'latest' && 'latest' || format('stable-{0}', inputs.oc_version) }}-${{ runner.os }}
+
     - if: steps.diff.outputs.triggered == 'true'
       env:
         OC: ${{ inputs.oc_version == 'latest' && 'latest' || format('stable-{0}', inputs.oc_version) }}
