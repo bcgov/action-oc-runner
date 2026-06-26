@@ -59,7 +59,7 @@ inputs:
       Override oc version, >= 4.0
       Example: 4.18
     default: "4.18"
-    pattern: '^(4\.[0-9]+|latest)$'
+    pattern: '^4\.[0-9]+$'
   repository:
     description: |
       Optionally, specify a different repo to clone
@@ -128,7 +128,7 @@ runs:
 
     - if: steps.diff.outputs.triggered == 'true'
       env:
-        OC: ${{ inputs.oc_version == 'latest' && 'latest' || format('stable-{0}', inputs.oc_version) }}
+        OC: ${{ format('stable-{0}', inputs.oc_version) }}
       shell: bash
       working-directory: /usr/local/bin
       run: |
