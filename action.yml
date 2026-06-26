@@ -154,6 +154,11 @@ runs:
           echo "::error::Invalid login_attempts: '${ATTEMPTS}'. Must be a positive integer."
           exit 1
         fi
+        OC_VERSION_INPUT="${{ inputs.oc_version }}"
+        if ! [[ "${OC_VERSION_INPUT}" =~ ^4\.[0-9]+$ ]]; then
+          echo "::error::Invalid oc_version: '${OC_VERSION_INPUT}'. Must be a stable 4.x version (e.g. 4.18). 'latest' is no longer supported."
+          exit 1
+        fi
 
         # Install CLI Tool and Login
         # Check if oc is already installed

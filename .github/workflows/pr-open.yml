@@ -108,7 +108,7 @@ jobs:
           oc_namespace: ${{ vars.oc_namespace }}
           oc_server: ${{ vars.oc_server }}
           oc_token: ${{ secrets.oc_token }}
-          oc_version: latest
+
           timeout: 1m
           triggers: ('.github/' 'action.yml' 'cronjob/' 'scripts/run_cronjob.sh')
 
