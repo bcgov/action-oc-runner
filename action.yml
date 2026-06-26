@@ -59,7 +59,7 @@ inputs:
       Override oc version, >= 4.0
       Example: 4.18
     default: "4.18"
-    pattern: '^4\.[0-9]+$'
+    pattern: '^(4\.[0-9]+|latest)$'
   repository:
     description: |
       Optionally, specify a different repo to clone
@@ -120,7 +120,7 @@ runs:
         ref: ${{ inputs.diff_branch }}
 
     - name: Cache OpenShift CLI
-      if: steps.diff.outputs.triggered == 'true'
+      if: steps.diff.outputs.triggered == 'true' && inputs.oc_version != 'latest'
       uses: actions/cache@v4
       with:
         path: /usr/local/bin/oc
@@ -128,7 +128,7 @@ runs:
 
     - if: steps.diff.outputs.triggered == 'true'
       env:
-        OC: ${{ format('stable-{0}', inputs.oc_version) }}
+        OC: ${{ inputs.oc_version == 'latest' && 'latest' || format('stable-{0}', inputs.oc_version) }}
       shell: bash
       working-directory: /usr/local/bin
       run: |
