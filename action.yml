@@ -121,7 +121,7 @@ runs:
 
     - name: Cache OpenShift CLI
       if: steps.diff.outputs.triggered == 'true' && inputs.oc_version != 'latest'
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: /usr/local/bin/oc
         key: oc-cli-stable-${{ inputs.oc_version }}-${{ runner.os }}-${{ runner.arch }}
