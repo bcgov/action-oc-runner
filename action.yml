@@ -156,7 +156,7 @@ runs:
         fi
         OC_VERSION_INPUT="${{ inputs.oc_version }}"
         if ! [[ "${OC_VERSION_INPUT}" =~ ^4\.[0-9]+$ ]]; then
-          echo "::error::Invalid oc_version: '${OC_VERSION_INPUT}'. Must be a stable 4.x version (e.g. 4.18). 'latest' is no longer supported."
+          echo "::error::Invalid oc_version: '${OC_VERSION_INPUT}'. Must be a stable 4.x version (e.g. 4.18)."
           exit 1
         fi
 
