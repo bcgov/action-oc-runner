@@ -155,7 +155,6 @@ runs:
           exit 1
         fi
 
-
         # Install CLI Tool and Login
         # Check if oc is already installed
         if ! command -v oc &>/dev/null; then
