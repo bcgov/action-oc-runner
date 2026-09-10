@@ -69,6 +69,10 @@ Provide as few as zero commands to login only.  There is a separate parameter fo
 
     # Maximum number of connection retry attempts for logging into OpenShift
     login_attempts: 5
+
+    # HTTP CONNECT proxy for OpenShift API traffic only (curl/oc). No credentials.
+    # Empty (default) uses the runner's own egress IP. GitHub and mirror.openshift.com stay direct.
+    https_proxy: ''
 ```
 
 # Example: Login only
@@ -159,6 +163,30 @@ jobs:
       - run: |
           echo "Triggered = ${{ needs.command.outputs.triggered }}"
           echo "Command output = ${{ needs.command.outputs.commands }}"
+```
+
+# HTTP CONNECT proxy (optional)
+
+GitHub-hosted runners use rotating Azure IPs. Cluster API firewalls that allowlist only some of those prefixes will drop `curl` to `:6443` (`HTTP 000` / `curl (28)`). Retrying the same job does not change the IP.
+
+This action can send **OpenShift API** traffic through an HTTP CONNECT proxy you control. One proxy can front every cluster: the CONNECT target is `oc_server` (silver, gold, or otherwise), not a hostname baked into the action.
+
+No proxy password. `https_proxy` must be `http(s)://host` or `http(s)://host:port`. Put allowlisting on the proxy instead of in GitHub secrets:
+
+- **Destination:** `CONNECT` only to your API hosts on port `6443`
+- **Source:** GitHub Actions IPs from `https://api.github.com/meta` (`actions`)
+- **Gold/Silver ACL:** allow the proxy's **single egress IP** (the group that will not maintain GitHub's ranges only has to allow one address)
+
+Leave `https_proxy` empty until that host exists. A later default in this action is what Renovate can fan out to dependents. A local proxy on the runner is only a wiring test; it does not change the egress IP.
+
+```yaml
+- uses: bcgov/action-oc-runner@X.Y.Z
+  with:
+    oc_namespace: ${{ vars.oc_namespace }}
+    oc_server: ${{ vars.oc_server }}
+    oc_token: ${{ secrets.OC_TOKEN }}
+    https_proxy: http://oc-proxy.example:3128
+    commands: oc whoami
 ```
 
 # OpenShift Login Retry and Fail-Fast Behavior

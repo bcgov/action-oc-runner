@@ -93,6 +93,13 @@ inputs:
       Example: 5, 10
     default: "5"
     pattern: "^[1-9][0-9]*$"
+  https_proxy:
+    description: |
+      Optional HTTP CONNECT proxy for OpenShift API traffic (curl and oc).
+      No credentials. Empty keeps direct egress. GitHub and mirror.openshift.com stay direct.
+      Example: http://oc-proxy.example:3128
+    default: ""
+    pattern: '^$|^https?://[A-Za-z0-9._-]+(:[0-9]{1,5})?$'
 
 outputs:
   commands:
@@ -129,10 +136,13 @@ runs:
     - if: steps.diff.outputs.triggered == 'true'
       env:
         OC: ${{ format('stable-{0}', inputs.oc_version) }}
+        ACTION_HTTPS_PROXY: ${{ inputs.https_proxy }}
       shell: bash
       working-directory: /usr/local/bin
       run: |
         # Input validation gate
+        # shellcheck source=scripts/apply_proxy_env.sh
+        source "${GITHUB_ACTION_PATH}/scripts/apply_proxy_env.sh" || exit 1
         SERVER_URL="${{ inputs.oc_server }}"
         NAMESPACE="${{ inputs.oc_namespace }}"
         TOKEN_INPUT="${{ inputs.oc_token }}"
@@ -162,7 +172,7 @@ runs:
           echo "Downloading OpenShift CLI from ${URL}..."
 
           # Download the archive with timeout limits
-          if ! wget --timeout=15 --tries=3 "${URL}" -qO oc.tar.gz; then
+          if ! wget --no-proxy --timeout=15 --tries=3 "${URL}" -qO oc.tar.gz; then
             echo "Error: Failed to download OpenShift CLI"
             exit 1
           fi
@@ -257,9 +267,13 @@ runs:
 
     - if: steps.diff.outputs.triggered == 'true' && inputs.commands
       id: commands
+      env:
+        ACTION_HTTPS_PROXY: ${{ inputs.https_proxy }}
       shell: bash
       run: |
         set -eEuo pipefail
+        # shellcheck source=scripts/apply_proxy_env.sh
+        source "${GITHUB_ACTION_PATH}/scripts/apply_proxy_env.sh"
         ACTION_SOURCE="bcgov/action-oc-runner"
 
         on_commands_error() {
@@ -346,7 +360,11 @@ runs:
 
     - if: steps.diff.outputs.triggered == 'true' && inputs.cronjob
       id: cronjob
+      env:
+        ACTION_HTTPS_PROXY: ${{ inputs.https_proxy }}
       shell: bash
       run: |
+        # shellcheck source=scripts/apply_proxy_env.sh
+        source "${GITHUB_ACTION_PATH}/scripts/apply_proxy_env.sh" || exit 1
         # Run the cronjob script
         ./scripts/run_cronjob.sh "${{ inputs.cronjob }}" "${{ inputs.timeout }}" "${{ inputs.cronjob_tail }}"
