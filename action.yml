@@ -273,7 +273,7 @@ runs:
       run: |
         set -eEuo pipefail
         # shellcheck source=scripts/apply_proxy_env.sh
-        source "${GITHUB_ACTION_PATH}/scripts/apply_proxy_env.sh"
+        source "${GITHUB_ACTION_PATH}/scripts/apply_proxy_env.sh" || exit 1
         ACTION_SOURCE="bcgov/action-oc-runner"
 
         on_commands_error() {
