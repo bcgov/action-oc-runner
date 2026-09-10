@@ -30,4 +30,7 @@ if source "${APPLY}"; then
   fail "proxy with a path must be rejected"
 fi
 
+DEFAULT_PROXY="$(awk '/^  https_proxy:/{f=1} f && /default:/{print; exit}' "${ROOT}/action.yml" | sed -n 's/.*default: "\(.*\)"/\1/p')"
+[[ "${DEFAULT_PROXY}" =~ ^https?://[A-Za-z0-9._-]+(:[0-9]{1,5})?$ ]] || fail "action.yml https_proxy default must be a credential-less http(s) proxy URL (got '${DEFAULT_PROXY}')"
+
 echo "apply_proxy_env_test.sh: ok"

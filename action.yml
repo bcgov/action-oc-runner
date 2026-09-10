@@ -95,10 +95,11 @@ inputs:
     pattern: "^[1-9][0-9]*$"
   https_proxy:
     description: |
-      Optional HTTP CONNECT proxy for OpenShift API traffic (curl and oc).
-      No credentials. Empty keeps direct egress. GitHub and mirror.openshift.com stay direct.
-      Example: http://oc-proxy.example:3128
-    default: ""
+      HTTP CONNECT proxy for OpenShift API traffic (curl and oc). No credentials.
+      Omit to use the default jumphost (change that default and tag a release to fan out via Renovate).
+      Set to an empty string for direct runner egress. GitHub and mirror.openshift.com stay direct.
+      Example: http://action-oc-runner-proxy.apps.silver.devops.gov.bc.ca:3128
+    default: "http://action-oc-runner-proxy.apps.silver.devops.gov.bc.ca:3128"
     pattern: '^$|^https?://[A-Za-z0-9._-]+(:[0-9]{1,5})?$'
 
 outputs:

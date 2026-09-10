@@ -71,8 +71,9 @@ Provide as few as zero commands to login only.  There is a separate parameter fo
     login_attempts: 5
 
     # HTTP CONNECT proxy for OpenShift API traffic only (curl/oc). No credentials.
-    # Empty (default) uses the runner's own egress IP. GitHub and mirror.openshift.com stay direct.
-    https_proxy: ''
+    # Omit to use the action default jumphost. Empty string uses the runner's own egress IP.
+    # Change the default in action.yml and tag a release to fan out via Renovate.
+    https_proxy: http://action-oc-runner-proxy.apps.silver.devops.gov.bc.ca:3128
 ```
 
 # Example: Login only
@@ -177,7 +178,7 @@ No proxy password. `https_proxy` must be `http(s)://host` or `http(s)://host:por
 - **Source:** GitHub Actions IPs from `https://api.github.com/meta` (`actions`)
 - **Gold/Silver ACL:** allow the proxy's **single egress IP** (the group that will not maintain GitHub's ranges only has to allow one address)
 
-Leave `https_proxy` empty until that host exists. A later default in this action is what Renovate can fan out to dependents. A local proxy on the runner is only a wiring test; it does not change the egress IP.
+The default `https_proxy` in `action.yml` is the fan-out lever. Dependents that omit the input pick it up on the next action tag (Renovate). Change that string and tag again if the jumphost or firewall target moves. Pass `https_proxy: ''` for direct runner egress (this repo’s own CI does that until the jumphost is live). A local proxy on the runner is only a wiring test; it does not change the egress IP.
 
 ```yaml
 - uses: bcgov/action-oc-runner@X.Y.Z
@@ -185,7 +186,6 @@ Leave `https_proxy` empty until that host exists. A later default in this action
     oc_namespace: ${{ vars.oc_namespace }}
     oc_server: ${{ vars.oc_server }}
     oc_token: ${{ secrets.OC_TOKEN }}
-    https_proxy: http://oc-proxy.example:3128
     commands: oc whoami
 ```
 

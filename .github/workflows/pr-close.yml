@@ -20,6 +20,7 @@ jobs:
       - uses: ./
         with:
           commands: oc delete all -l app=${{ github.event.repository.name }}-${{ github.event.number }}
+          https_proxy: ''
           oc_namespace: ${{ vars.oc_namespace }}
           oc_server: ${{ vars.oc_server }}
           oc_token: ${{ secrets.oc_token }}

@@ -21,6 +21,7 @@ jobs:
           commands: |
             oc whoami
             echo "whoami-output-ok" >> "$GITHUB_OUTPUT"
+          https_proxy: ''
           oc_namespace: ${{ vars.oc_namespace }}
           oc_server: ${{ vars.oc_server }}
           oc_token: ${{ secrets.oc_token }}
@@ -117,6 +118,7 @@ jobs:
               echo "Repository URL: $(git config --get remote.origin.url)"
               echo "Current Branch: $(git branch --show-current)"
             fi
+          https_proxy: ''
           oc_namespace: ${{ vars.oc_namespace }}
           oc_server: ${{ vars.oc_server }}
           oc_token: ${{ secrets.oc_token }}
@@ -143,6 +145,7 @@ jobs:
       - uses: ./
         with:
           commands: oc version
+          https_proxy: ''
           oc_namespace: ${{ vars.oc_namespace }}
           oc_server: ${{ vars.oc_server }}
           oc_token: ${{ secrets.oc_token }}
@@ -162,6 +165,7 @@ jobs:
           commands: oc process -f cronjob/openshift.deploy.yml -p ZONE=${{ github.event.number }} | oc apply -f -
           cronjob: ${{ github.event.repository.name }}-${{ github.event.number }}-cronjob
           cronjob_tail: -1
+          https_proxy: ''
           oc_namespace: ${{ vars.oc_namespace }}
           oc_server: ${{ vars.oc_server }}
           oc_token: ${{ secrets.oc_token }}
@@ -191,6 +195,7 @@ jobs:
         continue-on-error: true
         with:
           commands: oc whoami
+          https_proxy: ''
           oc_namespace: ${{ vars.oc_namespace }}
           oc_server: https://api.nonexistent.devops.gov.bc.ca:6443
           oc_token: ${{ secrets.oc_token }}
@@ -213,6 +218,7 @@ jobs:
         continue-on-error: true
         with:
           commands: oc whoami
+          https_proxy: ''
           oc_namespace: ${{ vars.oc_namespace }}
           oc_server: ${{ vars.oc_server }}
           oc_token: invalidtokeninvalidtokeninvalidtokeninvalidtoken
