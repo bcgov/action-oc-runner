@@ -22,6 +22,18 @@ got="$(OC_SERVER=https://api.emerald.devops.gov.bc.ca:6443 OC_RELAY='https://oc-
 got="$(OC_SERVER=https://api.dev.example.org:6443 OC_RELAY='https://oc-relay.apps.{cluster}.example.org' bash "${RESOLVE}")"
 [ "${got}" = "https://oc-relay.apps.dev.example.org" ] || fail "cluster name must not be tied to devops.gov.bc.ca, got '${got}'"
 
+# {domain} makes one relay string portable across orgs and clusters
+for pair in \
+  "https://api.silver.devops.gov.bc.ca:6443|https://oc-relay.apps.silver.devops.gov.bc.ca" \
+  "https://api.gold.devops.gov.bc.ca:6443|https://oc-relay.apps.gold.devops.gov.bc.ca" \
+  "https://api.emerald.devops.gov.bc.ca:6443|https://oc-relay.apps.emerald.devops.gov.bc.ca" \
+  "https://api.ocp4.example.com:6443|https://oc-relay.apps.ocp4.example.com" ; do
+  server="${pair%%|*}"
+  want="${pair##*|}"
+  got="$(OC_SERVER="${server}" OC_RELAY='https://oc-relay.apps.{domain}' bash "${RESOLVE}")"
+  [ "${got}" = "${want}" ] || fail "{domain} for ${server} expected '${want}', got '${got}'"
+done
+
 got="$(OC_SERVER=https://api.gold.devops.gov.bc.ca:6443 OC_RELAY='https://fixed-relay.example.ca' bash "${RESOLVE}")"
 [ "${got}" = "https://fixed-relay.example.ca" ] || fail "relay without {cluster} must be used verbatim, got '${got}'"
 

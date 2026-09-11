@@ -71,8 +71,8 @@ Provide as few as zero commands to login only.  There is a separate parameter fo
     login_attempts: 5
 
     # Relay Route to use instead of api.<cluster>:6443, when runner IPs are blocked
-    # '{cluster}' is filled in from oc_server; see relay/openshift.deploy.yml
-    oc_relay: https://oc-relay.apps.{cluster}.devops.gov.bc.ca
+    # '{domain}' and '{cluster}' come from oc_server; see relay/openshift.deploy.yml
+    oc_relay: https://oc-relay.apps.{domain}
 
     # HTTP CONNECT proxy for OpenShift API traffic only (curl/oc). No credentials.
     https_proxy: ''
@@ -182,6 +182,9 @@ oc process -f relay/openshift.deploy.yml \
 
 oc process -f relay/openshift.deploy.yml \
   -p HOST=oc-relay.apps.gold.devops.gov.bc.ca | oc apply -f -
+
+oc process -f relay/openshift.deploy.yml \
+  -p HOST=oc-relay.apps.emerald.devops.gov.bc.ca | oc apply -f -
 ```
 
 ```yaml
@@ -190,11 +193,20 @@ oc process -f relay/openshift.deploy.yml \
     oc_namespace: ${{ vars.oc_namespace }}
     oc_server: ${{ vars.oc_server }}
     oc_token: ${{ secrets.OC_TOKEN }}
-    oc_relay: https://oc-relay.apps.{cluster}.devops.gov.bc.ca
+    oc_relay: https://oc-relay.apps.{domain}
     commands: oc whoami
 ```
 
-`{cluster}` is the label after `api.` in `oc_server`, so a single `oc_relay` string covers silver, gold, emerald, and any other cluster whose API is `https://api.<cluster>.<domain>:6443`. Callers keep passing their existing `oc_server` and nothing else changes. Omit `{cluster}` to pin one fixed relay host.
+OpenShift names its API `api.<cluster>.<domain>` and its routes `*.apps.<cluster>.<domain>`, so both placeholders come from `oc_server` and a single `oc_relay` value works on any cluster, in any organization:
+
+| Placeholder | `https://api.silver.devops.gov.bc.ca:6443` gives |
+| :--- | :--- |
+| `{domain}` | `silver.devops.gov.bc.ca` |
+| `{cluster}` | `silver` |
+
+Callers keep passing the `oc_server` they already pass. Use a plain hostname with no placeholder to pin one fixed relay.
+
+**Access control:** the relay deliberately has none of its own. Every request already carries your OpenShift token, which the cluster API validates, and the relay cannot reach anything except that one API. Adding a second credential would mean either editing every calling repository (composite actions cannot read the `secrets` context) or hardcoding one organization's identity provider into a shared action.
 
 **Rolling this out to many repositories:** set the `oc_relay` default in `action.yml` and tag a release. Dependents that never pass `oc_relay` pick it up on their next Renovate bump, with no change to their workflow files. The default ships empty, so nothing routes through a relay until you deploy one and set it.
 

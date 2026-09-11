@@ -96,10 +96,11 @@ inputs:
   oc_relay:
     description: |
       Reverse proxy Route to use instead of the cluster's public API endpoint, when
-      GitHub runner IPs are dropped on port 6443. '{cluster}' is filled in from oc_server.
-      Deploy relay/openshift.deploy.yml per cluster, then set this default and tag a
-      release; dependents that omit the input pick it up via Renovate.
-      Example: https://oc-relay.apps.{cluster}.devops.gov.bc.ca
+      GitHub runner IPs are dropped on port 6443. Both placeholders come from oc_server,
+      so one value covers every cluster: '{domain}' is everything after 'api.' and
+      '{cluster}' is the label after 'api.'. Deploy relay/openshift.deploy.yml on each
+      cluster first; an unreachable relay fails the login.
+      Example: https://oc-relay.apps.{domain}
     default: ""
     pattern: '^$|^https://[A-Za-z0-9._{}-]+$'
   https_proxy:
