@@ -217,6 +217,8 @@ This restricts use to an *organization*, not to this action. GitHub issues no id
 
 The proxy does receive repo-scoped `GITHUB_TOKEN`s, valid for the length of a job. Run it somewhere you trust.
 
+There is no rate limiting. Every unrecognised credential costs one GitHub API call, and validated ones are cached for 30 minutes, so a flood of bogus credentials can saturate the eight auth helpers and slow logins. It degrades rather than opens up, but put rate limiting in front of it if that matters.
+
 # Troubleshooting
 
 The `commands` block runs in strict shell mode. A command failure (including optional `grep` misses in pipelines) can stop the step immediately.
