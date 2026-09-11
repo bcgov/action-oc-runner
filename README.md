@@ -178,6 +178,8 @@ A CONNECT proxy for blocked GitHub runner IPs lives in `proxy/`. `.github/workfl
 
 The GHCR package starts private. Deploy jobs bootstrap a `ghcr` pull secret from `GITHUB_TOKEN` (`packages: read`). Prod also needs `oc-runner-tls` (certificate valid for the stable hostname). PR stacks mint their own cert.
 
+Until this workflow is on `main`, workflow edits in the PR only register as push events (which use the default-branch definition). Use **Actions → oc-runner → Run workflow** on the PR branch with the PR number to exercise build → deploy-pr → e2e.
+
 # Troubleshooting
 
 The `commands` block runs in strict shell mode. A command failure (including optional `grep` misses in pipelines) can stop the step immediately.
