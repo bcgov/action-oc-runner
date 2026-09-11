@@ -70,10 +70,12 @@ Provide as few as zero commands to login only.  There is a separate parameter fo
     # Maximum number of connection retry attempts for logging into OpenShift
     login_attempts: 5
 
+    # Relay Route to use instead of api.<cluster>:6443, when runner IPs are blocked
+    # '{cluster}' is filled in from oc_server; see relay/openshift.deploy.yml
+    oc_relay: https://oc-relay.apps.{cluster}.devops.gov.bc.ca
+
     # HTTP CONNECT proxy for OpenShift API traffic only (curl/oc). No credentials.
-    # Omit to use the action default jumphost. Empty string uses the runner's own egress IP.
-    # Change the default in action.yml and tag a release to fan out via Renovate.
-    https_proxy: http://action-oc-runner-proxy.apps.silver.devops.gov.bc.ca:3128
+    https_proxy: ''
 ```
 
 # Example: Login only
@@ -166,19 +168,18 @@ jobs:
           echo "Command output = ${{ needs.command.outputs.commands }}"
 ```
 
-# HTTP CONNECT proxy (optional)
+# Blocked runner IPs and the API relay
 
-GitHub-hosted runners use rotating Azure IPs. Cluster API firewalls that allowlist only some of those prefixes will drop `curl` to `:6443` (`HTTP 000` / `curl (28)`). Retrying the same job does not change the IP.
+GitHub-hosted runners get rotating Azure IPs. When a cluster drops some of those, login fails with `HTTP 000` / `curl: (28)` on every attempt, because all retries reuse the same runner IP. The cluster API itself is reachable from the public internet, so only the runner's source address is the problem.
 
-This action can send **OpenShift API** traffic through an HTTP CONNECT proxy you control. One proxy can front every cluster: the CONNECT target is `oc_server` (silver, gold, or otherwise), not a hostname baked into the action.
+The relay is an nginx reverse proxy that runs **on the cluster** and forwards to the in-cluster API (`kubernetes.default.svc`). GitHub talks to a normal Route on `*.apps.<cluster>` port 443 instead of `api.<cluster>` port 6443. It holds no credentials and passes your `Authorization` header straight through, and it can only reach its own cluster's API, so it is not an open proxy.
 
-No proxy password. `https_proxy` must be `http(s)://host` or `http(s)://host:port`. Put allowlisting on the proxy instead of in GitHub secrets:
+Deploy one per cluster, then point the action at it:
 
-- **Destination:** `CONNECT` only to your API hosts on port `6443`
-- **Source:** GitHub Actions IPs from `https://api.github.com/meta` (`actions`)
-- **Gold/Silver ACL:** allow the proxy's **single egress IP** (the group that will not maintain GitHub's ranges only has to allow one address)
-
-The default `https_proxy` in `action.yml` is the fan-out lever. Dependents that omit the input pick it up on the next action tag (Renovate). Change that string and tag again if the jumphost or firewall target moves. Pass `https_proxy: ''` for direct runner egress (this repo’s own CI does that until the jumphost is live). A local proxy on the runner is only a wiring test; it does not change the egress IP.
+```bash
+# From a machine that can already reach the cluster, e.g. a laptop
+oc process -f relay/openshift.deploy.yml -p CLUSTER=silver | oc apply -f -
+```
 
 ```yaml
 - uses: bcgov/action-oc-runner@X.Y.Z
@@ -186,7 +187,20 @@ The default `https_proxy` in `action.yml` is the fan-out lever. Dependents that 
     oc_namespace: ${{ vars.oc_namespace }}
     oc_server: ${{ vars.oc_server }}
     oc_token: ${{ secrets.OC_TOKEN }}
+    oc_relay: https://oc-relay.apps.{cluster}.devops.gov.bc.ca
     commands: oc whoami
+```
+
+`{cluster}` is substituted from `oc_server`, so one string covers silver, gold, and emerald. `oc_server` stays as-is; it is only used to pick the cluster.
+
+**Rolling this out to many repositories:** set the `oc_relay` default in `action.yml` and tag a release. Dependents that never pass `oc_relay` pick it up on their next Renovate bump, with no change to their workflow files. The default ships empty, so nothing routes through a relay until you deploy one and set it.
+
+## HTTP CONNECT proxy (alternative)
+
+If you already operate a jumphost outside the cluster, `https_proxy` sends `curl` and `oc` through it instead. No credentials are accepted in the URL; GitHub and `mirror.openshift.com` stay direct. Prefer the relay: a public CONNECT proxy that can reach an API server is worth locking down carefully, while the relay can only ever speak to its own cluster.
+
+```yaml
+    https_proxy: http://oc-proxy.example:3128
 ```
 
 # OpenShift Login Retry and Fail-Fast Behavior
