@@ -98,8 +98,10 @@ jobs:
       - name: Confirm the traffic actually went through the proxy
         run: |
           set -euo pipefail
-          podman logs oc-proxy 2>&1 | grep TCP_ || true
-          podman logs oc-proxy 2>&1 | grep -q "TCP_TUNNEL.*${GITHUB_REPOSITORY}" \
+          # Read the log once; 'grep -q' in a pipeline would SIGPIPE podman and trip pipefail
+          podman logs oc-proxy > proxy.log 2>&1
+          grep TCP_ proxy.log || true
+          grep -q "TCP_TUNNEL.*${GITHUB_REPOSITORY}" proxy.log \
             || { echo "::error::No tunnel logged for ${GITHUB_REPOSITORY}; traffic bypassed the proxy."; exit 1; }
           echo "Login and commands tunnelled through the proxy."
 
