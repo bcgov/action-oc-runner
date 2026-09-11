@@ -64,12 +64,14 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
+      packages: read
     steps:
       - uses: actions/checkout@v7
       - uses: ./
         env:
           IMAGE: ${{ env.IMAGE_NAME }}@${{ needs.build.outputs.digest }}
           PR: ${{ github.event.number }}
+          GITHUB_TOKEN: ${{ github.token }}
         with:
           oc_namespace: ${{ vars.oc_namespace }}
           oc_server: ${{ vars.oc_server }}
@@ -81,7 +83,12 @@ jobs:
               -addext "subjectAltName=DNS:${HOST}"
             oc create secret tls "oc-runner-tls-${PR}" \
               --cert=tls.crt --key=tls.key --dry-run=client -o yaml | oc apply -f -
-            oc get secret ghcr
+            oc create secret docker-registry ghcr \
+              --docker-server=ghcr.io \
+              --docker-username="${{ github.actor }}" \
+              --docker-password="${GITHUB_TOKEN}" \
+              --docker-email=unused \
+              --dry-run=client -o yaml | oc apply -f -
             oc process -f proxy/openshift.deploy.yml \
               -p APP="oc-runner-${PR}" \
               -p HOST="${HOST}" \
@@ -198,18 +205,25 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
+      packages: read
     steps:
       - uses: actions/checkout@v7
       - uses: ./
         env:
           IMAGE: ${{ needs.track.outputs.image }}
+          GITHUB_TOKEN: ${{ github.token }}
         with:
           oc_namespace: 32d13a-prod
           oc_server: ${{ vars.oc_server }}
           oc_token: ${{ secrets.oc_token }}
           commands: |
             oc get secret oc-runner-tls
-            oc get secret ghcr
+            oc create secret docker-registry ghcr \
+              --docker-server=ghcr.io \
+              --docker-username="${{ github.actor }}" \
+              --docker-password="${GITHUB_TOKEN}" \
+              --docker-email=unused \
+              --dry-run=client -o yaml | oc apply -f -
             oc process -f proxy/openshift.deploy.yml \
               -p APP=oc-runner \
               -p HOST=oc-runner.apps.silver.devops.gov.bc.ca \
