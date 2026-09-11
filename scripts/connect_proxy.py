@@ -39,7 +39,8 @@ def _handle(client: socket.socket, log_path: str) -> None:
             buf += chunk
             if len(buf) > 8192:
                 return
-        request_line = buf.split(b"\r\n", 1)[0].decode("ascii", "replace")
+        headers, _, pipelined = buf.partition(b"\r\n\r\n")
+        request_line = headers.split(b"\r\n", 1)[0].decode("ascii", "replace")
         parts = request_line.split()
         if len(parts) < 2 or parts[0] != "CONNECT":
             client.sendall(b"HTTP/1.1 405 Method Not Allowed\r\nConnection: close\r\n\r\n")
@@ -51,12 +52,16 @@ def _handle(client: socket.socket, log_path: str) -> None:
             log.flush()
         remote = socket.create_connection((host, port), timeout=20)
         client.sendall(b"HTTP/1.1 200 Connection Established\r\n\r\n")
+        # A client may pipeline the first tunnelled bytes with the CONNECT request
+        if pipelined:
+            remote.sendall(pipelined)
         _tunnel(client, remote)
     except (OSError, ValueError):
         try:
             client.sendall(b"HTTP/1.1 502 Bad Gateway\r\nConnection: close\r\n\r\n")
         except OSError:
             pass
+    finally:
         client.close()
 
 

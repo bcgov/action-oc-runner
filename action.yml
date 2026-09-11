@@ -186,7 +186,7 @@ runs:
           echo "Downloading OpenShift CLI from ${URL}..."
 
           # Download the archive with timeout limits
-          if ! wget --no-proxy --timeout=15 --tries=3 "${URL}" -qO oc.tar.gz; then
+          if ! wget --timeout=15 --tries=3 "${URL}" -qO oc.tar.gz; then
             echo "Error: Failed to download OpenShift CLI"
             exit 1
           fi
