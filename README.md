@@ -185,7 +185,11 @@ GitHub-hosted runners are sometimes unable to reach the OpenShift API, failing l
     commands: oc whoami
 ```
 
-No new secret is needed. The action authenticates to the proxy with the calling workflow's `GITHUB_TOKEN`, passed as `owner/repo` plus token in the proxy URL. A `GITHUB_TOKEN` only authenticates for its own repository, so the proxy can confirm a caller really is a workflow in an allowed organization by asking `https://api.github.com/repos/<claimed-repo>`.
+No new secret is needed. The action authenticates to the proxy with the calling workflow's `GITHUB_TOKEN`, passed as `owner/repo` plus token in the proxy URL.
+
+The proxy works out which repository a token belongs to rather than believing the name it was given. It asks `https://api.github.com/installation/repositories`, which reports the repositories a workflow token is scoped to, and accepts the request only if the claimed repository is among them. Checking `/repos/<claimed-repo>` instead would prove nothing, because every valid token can read any public repository, so that check would admit anyone with a GitHub account.
+
+This means `oc_proxy` needs the workflow's own `GITHUB_TOKEN`, which is the default. A personal access token is not an installation token and will be refused.
 
 Because it tunnels with `CONNECT`, TLS runs end-to-end between the runner and the cluster. **The proxy never sees your OpenShift token**, only encrypted bytes. It also refuses anything that is not a `CONNECT` to a declared API host on port 6443, so an authorized caller cannot use it as a general-purpose proxy.
 

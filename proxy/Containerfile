@@ -1,6 +1,6 @@
 FROM registry.access.redhat.com/ubi9/ubi:latest
 
-RUN dnf install -y squid gettext && dnf clean all
+RUN dnf install -y squid gettext jq && dnf clean all
 
 COPY squid.conf.template /etc/squid/squid.conf.template
 COPY github_auth.sh /usr/local/bin/github_auth.sh

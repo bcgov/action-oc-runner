@@ -99,6 +99,7 @@ inputs:
       cluster sees. Useful when GitHub runner addresses are blocked. The proxy
       authenticates callers with this workflow's GITHUB_TOKEN, so no extra secret is
       needed, and TLS stays end-to-end, so the proxy never sees your OpenShift token.
+      Needs the default github_token; a personal access token is refused.
       Empty (default) connects directly. See proxy/ to run one.
       Example: https://oc-proxy.example.com:3129
     default: ""

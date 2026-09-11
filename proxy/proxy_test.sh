@@ -24,15 +24,31 @@ openssl req -x509 -newkey rsa:2048 -keyout /etc/squid/tls/tls.key \
 openssl req -x509 -newkey rsa:2048 -keyout /api.key -out /api.crt \
   -days 1 -nodes -subj "/CN=fake-api.test" >/dev/null 2>&1
 
-# Fake GitHub: 200 only for a valid token on a /repos/ path, like the real API
+# Fake GitHub, faithful on the point that matters: /repos/<anything> succeeds for
+# ANY valid token, because public repositories are readable by everyone. Only
+# /installation/repositories ties a token to its own repository.
 python3 - <<'PY' &
-import http.server
+import http.server, json
+TOKENS = {
+    "goodtoken":   "bcgov/action-oc-runner",
+    "bcgovctoken": "bcgov-c/something",
+    "eviltoken":   "attacker/evil",
+}
 class H(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
-        ok = (self.path.startswith("/repos/")
-              and self.headers.get("Authorization") == "Bearer goodtoken")
-        self.send_response(200 if ok else 404)
-        self.send_header("Content-Length", "0"); self.end_headers()
+        auth = (self.headers.get("Authorization") or "").removeprefix("Bearer ")
+        if auth not in TOKENS:
+            self.send_response(401); self.send_header("Content-Length", "0")
+            self.end_headers(); return
+        if self.path.startswith("/installation/repositories"):
+            body = json.dumps({"repositories": [{"full_name": TOKENS[auth]}]}).encode()
+        elif self.path.startswith("/repos/"):
+            body = b'{"private":false}'
+        else:
+            self.send_response(404); self.send_header("Content-Length", "0")
+            self.end_headers(); return
+        self.send_response(200); self.send_header("Content-Length", str(len(body)))
+        self.end_headers(); self.wfile.write(body)
     def log_message(self, *a): pass
 http.server.HTTPServer(("127.0.0.1", 8080), H).serve_forever()
 PY
@@ -81,18 +97,24 @@ code=$(try 'bcgov%2Faction-oc-runner' goodtoken 'fake-api.test:6443')
 [ "${code}" = "200" ] || fail "bcgov repo with a valid token should tunnel, got '${code}'"
 echo "  bcgov/action-oc-runner + valid token -> ${code}"
 
-code=$(try 'bcgov-c%2Fsomething' goodtoken 'fake-api.test:6443')
+code=$(try 'bcgov-c%2Fsomething' bcgovctoken 'fake-api.test:6443')
 [ "${code}" = "200" ] || fail "bcgov-c should be allowed too, got '${code}'"
-echo "  bcgov-c/something + valid token     -> ${code}"
+echo "  bcgov-c/something + its own token   -> ${code}"
 
 echo "== refused =="
 code=$(try 'bcgov%2Faction-oc-runner' wrongtoken 'fake-api.test:6443')
 [ "${code}" = "200" ] && fail "an invalid GitHub token must not tunnel"
 echo "  valid repo + invalid token          -> ${code:-blocked}"
 
-code=$(try 'attacker%2Fevil' goodtoken 'fake-api.test:6443')
+# The token works, but it belongs to attacker/evil. Trusting the claimed name
+# would admit anyone with a GitHub account, since public repos read fine.
+code=$(try 'bcgov%2Faction-oc-runner' eviltoken 'fake-api.test:6443')
+[ "${code}" = "200" ] && fail "a valid token must not be usable to impersonate another repository"
+echo "  someone else's token, bcgov claim   -> ${code:-blocked}"
+
+code=$(try 'attacker%2Fevil' eviltoken 'fake-api.test:6443')
 [ "${code}" = "200" ] && fail "a repo outside the allowed owners must not tunnel"
-echo "  outside-org repo + valid token      -> ${code:-blocked}"
+echo "  outside-org repo + its own token    -> ${code:-blocked}"
 
 code=$(try 'bcgov%2Faction-oc-runner' goodtoken 'fake-other.test:6443')
 [ "${code}" = "200" ] && fail "an undeclared destination host must not tunnel"
@@ -118,16 +140,17 @@ code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 \
 echo "  allowed caller, plain GET (no CONNECT) -> ${code:-blocked}"
 
 # A blocked request proves little on its own, so confirm squid refused for the
-# stated reason. attacker/evil passes the token helper here, because the fake
-# GitHub accepts any repository; only the owner ACL can be rejecting it.
+# stated reason.
 echo "== reasons =="
 grep -q "TCP_TUNNEL.*bcgov/action-oc-runner" /squid.log \
   || { grep TCP_ /squid.log >&2; fail "expected a tunnel logged for the allowed caller"; }
 echo "  allowed caller logged as TCP_TUNNEL"
 
+# eviltoken authenticates fine under its own name, so its failure under the
+# bcgov claim can only come from the repository check, not from a bad token.
 grep -q "TCP_DENIED.*attacker/evil" /squid.log \
   || { grep TCP_ /squid.log >&2; fail "outside-org caller authenticated but was not denied by the owner ACL"; }
-echo "  outside-org caller authenticated, then denied by owner ACL"
+echo "  same token authenticates as attacker/evil, then denied by owner ACL"
 
 grep -q "TCP_DENIED/407" /squid.log \
   || { grep TCP_ /squid.log >&2; fail "expected an auth challenge for the invalid token"; }
