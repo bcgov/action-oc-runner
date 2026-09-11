@@ -93,6 +93,25 @@ inputs:
       Example: 5, 10
     default: "5"
     pattern: "^[1-9][0-9]*$"
+  oc_relay:
+    description: |
+      Reverse proxy Route to use instead of the cluster's public API endpoint, when
+      GitHub runner IPs are dropped on port 6443. Both placeholders come from oc_server,
+      so one value covers every cluster: '{domain}' is everything after 'api.' and
+      '{cluster}' is the label after 'api.'. Deploy relay/openshift.deploy.yml on each
+      cluster first; an unreachable relay fails the login.
+      Example: https://oc-relay.apps.{domain}
+    default: ""
+    pattern: '^$|^https://[A-Za-z0-9._{}-]+$'
+  proxy:
+    description: |
+      Send OpenShift API traffic (curl and oc) through a proxy, changing the egress IP
+      that the cluster sees. Use 'tor' to install and use Tor on the runner itself, which
+      is free and needs no infrastructure, or give a proxy URL. No credentials.
+      Empty (default) keeps direct egress. GitHub and mirror.openshift.com stay direct.
+      Example: tor, http://oc-proxy.example:3128, socks5://oc-proxy.example:1080
+    default: ""
+    pattern: '^$|^tor$|^(https?|socks5)://[A-Za-z0-9._-]+(:[0-9]{1,5})?$'
 
 outputs:
   commands:
@@ -129,10 +148,14 @@ runs:
     - if: steps.diff.outputs.triggered == 'true'
       env:
         OC: ${{ format('stable-{0}', inputs.oc_version) }}
+        ACTION_PROXY: ${{ inputs.proxy }}
+        ACTION_GITHUB_TOKEN: ${{ inputs.github_token }}
       shell: bash
       working-directory: /usr/local/bin
       run: |
         # Input validation gate
+        # shellcheck source=scripts/apply_proxy_env.sh
+        source "${GITHUB_ACTION_PATH}/scripts/apply_proxy_env.sh" || exit 1
         SERVER_URL="${{ inputs.oc_server }}"
         NAMESPACE="${{ inputs.oc_namespace }}"
         TOKEN_INPUT="${{ inputs.oc_token }}"
@@ -153,6 +176,36 @@ runs:
         if ! [[ "${ATTEMPTS}" =~ ^[1-9][0-9]*$ ]]; then
           echo "::error::Invalid login_attempts: '${ATTEMPTS}'. Must be a positive integer."
           exit 1
+        fi
+
+        # Swap in the relay Route when one is configured
+        SERVER_URL=$(OC_SERVER="${SERVER_URL}" OC_RELAY="${{ inputs.oc_relay }}" \
+          "${GITHUB_ACTION_PATH}/scripts/resolve_server.sh") || exit 1
+        echo "OpenShift API endpoint: ${SERVER_URL}"
+
+        # The relay only accepts workflows from its configured GitHub organization.
+        # 'oc' cannot send the identity headers itself, so route it via a local shim.
+        if [ -n "${{ inputs.oc_relay }}" ]; then
+          TOKEN_FILE=$(mktemp)
+          chmod 600 "${TOKEN_FILE}"
+          printf '%s' "${ACTION_GITHUB_TOKEN}" > "${TOKEN_FILE}"
+          nohup python3 "${GITHUB_ACTION_PATH}/scripts/relay_shim.py" \
+            --relay "${SERVER_URL}" \
+            --repository "${GITHUB_REPOSITORY}" \
+            --token-file "${TOKEN_FILE}" \
+            --listen-port 7443 >"${RUNNER_TEMP}/relay-shim.log" 2>&1 &
+          disown || true
+
+          for _ in $(seq 1 50); do
+            (exec 3<>/dev/tcp/127.0.0.1/7443) 2>/dev/null && break
+            sleep 0.2
+          done
+          if ! (exec 3<>/dev/tcp/127.0.0.1/7443) 2>/dev/null; then
+            echo "::error::Relay shim failed to start."
+            cat "${RUNNER_TEMP}/relay-shim.log"
+            exit 1
+          fi
+          SERVER_URL="http://127.0.0.1:7443"
         fi
 
         # Install CLI Tool and Login
@@ -186,7 +239,7 @@ runs:
           
           # Fetch token response with HTTP code directly to memory
           ERR_FILE=$(mktemp)
-          RESPONSE=$(curl -ksS -4 --connect-timeout 10 --max-time 30 -w "%{http_code}" -X POST "${SA_TOKEN_URL}" \
+          RESPONSE=$(curl -sS -4 --connect-timeout 10 --max-time 30 -w "%{http_code}" -X POST "${SA_TOKEN_URL}" \
             --header "Authorization: Bearer ${TOKEN_INPUT}" \
             --header "Content-Type: application/json; charset=utf-8" \
             --data '{"spec": {"expirationSeconds": 1500 }}' 2>"$ERR_FILE") || true

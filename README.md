@@ -69,6 +69,14 @@ Provide as few as zero commands to login only.  There is a separate parameter fo
 
     # Maximum number of connection retry attempts for logging into OpenShift
     login_attempts: 5
+
+    # Relay Route to use instead of api.<cluster>:6443, when runner IPs are blocked
+    # '{domain}' and '{cluster}' come from oc_server; see relay/openshift.deploy.yml
+    oc_relay: https://oc-relay.apps.{domain}
+
+    # Send API traffic through a proxy to change the egress IP the cluster sees.
+    # 'tor' installs Tor on the runner; or give an http(s):// or socks5:// URL.
+    proxy: ''
 ```
 
 # Example: Login only
@@ -160,6 +168,73 @@ jobs:
           echo "Triggered = ${{ needs.command.outputs.triggered }}"
           echo "Command output = ${{ needs.command.outputs.commands }}"
 ```
+
+# Blocked runner IPs and the API relay
+
+GitHub-hosted runners get rotating Azure IPs. When a cluster drops some of those, login fails with `HTTP 000` / `curl: (28)` on every attempt, because all retries reuse the same runner IP. The cluster API itself is reachable from the public internet, so only the runner's source address is the problem.
+
+The relay is an nginx reverse proxy that runs **on the cluster** and forwards to the in-cluster API (`kubernetes.default.svc`). GitHub talks to a normal Route on `*.apps.<cluster>` port 443 instead of `api.<cluster>` port 6443. It holds no credentials and passes your `Authorization` header straight through, and it can only reach its own cluster's API, so it is not an open proxy.
+
+Each cluster needs its own relay, because a relay only ever talks to the API of the cluster it runs on. Deploy one per cluster from a machine that can already reach that cluster, such as a laptop:
+
+```bash
+for CLUSTER in silver gold emerald; do
+  oc process -f relay/openshift.deploy.yml \
+    -p HOST=oc-relay.apps.${CLUSTER}.devops.gov.bc.ca \
+    -p GITHUB_OWNER=bcgov | oc apply -f -
+done
+```
+
+## Who can use the relay
+
+`GITHUB_OWNER` restricts the relay to GitHub Actions runs in one organization. Every request must carry the workflow's `GITHUB_TOKEN`, which the relay validates against `https://api.github.com/repos/<claimed-repo>`. A token only authenticates for its own repository, so a success there proves the caller really is a workflow in that organization. Requests from anywhere else get `403`, and results are cached for 60 seconds so a job with many `oc` calls costs one GitHub API call.
+
+`oc` has no flag for custom headers, so it cannot present that token itself. The action starts `scripts/relay_shim.py` on loopback, which stamps the identity headers and forwards over TLS. The shim discards any identity headers supplied by the caller, so a workflow cannot claim to be a different repository.
+
+This gates the relay on your *organization*, not on this action specifically. GitHub issues no identity for a composite action, and this repository is public, so any check tied to the action's own code could be reproduced by copying it. Organization membership is the strongest claim that can actually be verified.
+
+```yaml
+- uses: bcgov/action-oc-runner@X.Y.Z
+  with:
+    oc_namespace: ${{ vars.oc_namespace }}
+    oc_server: ${{ vars.oc_server }}
+    oc_token: ${{ secrets.OC_TOKEN }}
+    oc_relay: https://oc-relay.apps.{domain}
+    commands: oc whoami
+```
+
+OpenShift names its API `api.<cluster>.<domain>` and its routes `*.apps.<cluster>.<domain>`, so both placeholders come from `oc_server` and a single `oc_relay` value works on any cluster, in any organization:
+
+| Placeholder | `https://api.silver.devops.gov.bc.ca:6443` gives |
+| :--- | :--- |
+| `{domain}` | `silver.devops.gov.bc.ca` |
+| `{cluster}` | `silver` |
+
+Callers keep passing the `oc_server` they already pass. Use a plain hostname with no placeholder to pin one fixed relay.
+
+**Access control:** the relay deliberately has none of its own. Every request already carries your OpenShift token, which the cluster API validates, and the relay cannot reach anything except that one API. Adding a second credential would mean either editing every calling repository (composite actions cannot read the `secrets` context) or hardcoding one organization's identity provider into a shared action.
+
+**Rolling this out to many repositories:** set the `oc_relay` default in `action.yml` and tag a release. Dependents that never pass `oc_relay` pick it up on their next Renovate bump, with no change to their workflow files. The default ships empty, so nothing routes through a relay until you deploy one and set it.
+
+## Changing the egress IP with no infrastructure
+
+If you do not want to run a relay, `proxy: tor` installs and starts Tor on the runner and sends `curl` and `oc` through it. The cluster then sees a Tor exit address instead of the blocked runner IP. It is free, needs nothing deployed, and costs roughly 30 seconds of setup per job.
+
+```yaml
+- uses: bcgov/action-oc-runner@X.Y.Z
+  with:
+    oc_namespace: ${{ vars.oc_namespace }}
+    oc_server: ${{ vars.oc_server }}
+    oc_token: ${{ secrets.OC_TOKEN }}
+    proxy: tor
+    commands: oc whoami
+```
+
+`proxy` also takes a URL if you have your own hop, for example `http://oc-proxy.example:3128` or `socks5://oc-proxy.example:1080`. Credentials in the URL are rejected, and GitHub and `mirror.openshift.com` always stay direct.
+
+**The proxy is untrusted by design.** TLS runs end to end between the runner and the cluster API, so a proxy operator sees only ciphertext and the hostname, never your OpenShift token. This holds only because the token request validates the API certificate; do not reintroduce `curl -k`, which would let any proxy present its own certificate and read the token in plain text.
+
+Two caveats worth testing before you rely on Tor: many government networks block Tor exit addresses outright, so this may trade one block for another, and exit IPs change per circuit, so it cannot be combined with an allowlist.
 
 # OpenShift Login Retry and Fail-Fast Behavior
 
