@@ -3,7 +3,7 @@
 # oc-runner-<pr> actually tunnels allowed API calls and refuses everything else.
 #
 # Required: PROXY_HOST, TOKEN, GITHUB_REPOSITORY
-# PROXY_INSECURE=1 (default) for the throwaway PR certificate.
+# PROXY_INSECURE=1 (default) for the throwaway PR TLS certificate.
 set -euo pipefail
 
 : "${PROXY_HOST:?PROXY_HOST is required}"
