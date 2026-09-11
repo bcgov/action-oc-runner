@@ -23,7 +23,7 @@ jobs:
       contents: read
       packages: write
     env:
-      IMAGE: ghcr.io/${{ github.repository }}/oc-connect-proxy
+      IMAGE: ghcr.io/${{ github.repository }}/oc-runner
     steps:
       - uses: actions/checkout@v7
 

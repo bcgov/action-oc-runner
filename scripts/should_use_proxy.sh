@@ -30,4 +30,4 @@ if [ -n "${OC_PROXY:-}" ]; then
 fi
 
 # One proxy, in Silver. It CONNECTs to either API; gold does not need its own.
-echo "https://oc-proxy.apps.silver.devops.gov.bc.ca"
+echo "https://oc-runner.apps.silver.devops.gov.bc.ca"

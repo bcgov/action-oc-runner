@@ -173,7 +173,7 @@ To handle transient network drops, cluster API restarts, or runner configuration
 
 GitHub-hosted runners are sometimes unable to reach the OpenShift API, failing login with `curl: (28)` timeouts while the same cluster answers normally from elsewhere. The address the runner happens to get is blocked upstream, and neither the workflow nor this action can choose a different one.
 
-When a `bcgov` or `bcgov-c` workflow talking to gold or silver hits a connection timeout, the action retries through `https://oc-proxy.apps.silver.devops.gov.bc.ca`. That one proxy, in Silver, tunnels to either API. Callers do not set this. Any other org, and any other cluster, stays on a direct connection.
+When a `bcgov` or `bcgov-c` workflow talking to gold or silver hits a connection timeout, the action retries through `https://oc-runner.apps.silver.devops.gov.bc.ca`. That one proxy, in Silver, tunnels to either API. Callers do not set this. Any other org, and any other cluster, stays on a direct connection.
 
 ```yaml
 - uses: bcgov/action-oc-runner@vX.Y.Z
@@ -194,13 +194,13 @@ Because it tunnels with `CONNECT`, TLS runs end-to-end between the runner and th
 
 ## Running the proxy
 
-`proxy/` holds everything needed: a squid config, the GitHub auth helper, a `Containerfile`, and an OpenShift template. Pushes to `main` that touch `proxy/` publish `ghcr.io/bcgov/action-oc-runner/oc-connect-proxy`, tagged `latest` and by commit SHA, but only after the access gate passes. The package starts private, so either make it public or give the namespace a pull secret.
+`proxy/` holds everything needed: a squid config, the GitHub auth helper, a `Containerfile`, and an OpenShift template. Pushes to `main` that touch `proxy/` publish `ghcr.io/bcgov/action-oc-runner/oc-runner`, tagged `latest` and by commit SHA, but only after the access gate passes. The package starts private, so either make it public or give the namespace a pull secret.
 
 ```bash
 oc process -f proxy/openshift.deploy.yml \
-  -p HOST=oc-proxy.apps.silver.devops.gov.bc.ca \
-  -p TLS_SECRET=oc-proxy-tls \
-  -p IMAGE=ghcr.io/bcgov/action-oc-runner/oc-connect-proxy:latest \
+  -p HOST=oc-runner.apps.silver.devops.gov.bc.ca \
+  -p TLS_SECRET=oc-runner-tls \
+  -p IMAGE=ghcr.io/bcgov/action-oc-runner/oc-runner:latest \
   -p OWNER_REGEX='^bcgov(-c)?/' | oc apply -f -
 ```
 

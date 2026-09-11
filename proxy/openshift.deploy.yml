@@ -1,7 +1,7 @@
 apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
-  name: oc-connect-proxy
+  name: oc-runner
   annotations:
     description: |
       CONNECT proxy giving GitHub runners a different egress IP to the OpenShift API.
@@ -12,17 +12,17 @@ parameters:
   - name: HOST
     description: |
       Route hostname; TLS_SECRET must hold a certificate valid for it
-      Example: oc-proxy.apps.silver.devops.gov.bc.ca
+      Example: oc-runner.apps.silver.devops.gov.bc.ca
     required: true
   - name: TLS_SECRET
     description: |
       Secret with tls.crt and tls.key for HOST
-      Example: oc-proxy-tls
+      Example: oc-runner-tls
     required: true
   - name: IMAGE
     description: |
       Image built from proxy/Containerfile
-      Example: ghcr.io/bcgov/action-oc-runner/oc-connect-proxy:latest
+      Example: ghcr.io/bcgov/action-oc-runner/oc-runner:latest
     required: true
   - name: OWNER_REGEX
     description: Only repositories matching this may use the proxy
@@ -31,7 +31,7 @@ parameters:
     description: Space-separated API hostnames the proxy may tunnel to
     value: "api.gold.devops.gov.bc.ca api.silver.devops.gov.bc.ca"
   - name: APP
-    value: oc-proxy
+    value: oc-runner
 objects:
   - apiVersion: apps/v1
     kind: Deployment

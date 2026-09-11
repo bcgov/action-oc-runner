@@ -15,10 +15,10 @@ check() {
   [ "${out}" = "$2" ] || fail "$6: expected '${2}', got '${out}'"
 }
 
-check 0 "https://oc-proxy.apps.silver.devops.gov.bc.ca" \
+check 0 "https://oc-runner.apps.silver.devops.gov.bc.ca" \
   "bcgov/action-oc-runner" "https://api.gold.devops.gov.bc.ca:6443" "" \
   "bcgov on gold uses the Silver proxy"
-check 0 "https://oc-proxy.apps.silver.devops.gov.bc.ca" \
+check 0 "https://oc-runner.apps.silver.devops.gov.bc.ca" \
   "bcgov-c/something" "https://api.silver.devops.gov.bc.ca:6443" "" \
   "bcgov-c on silver uses the same proxy"
 check 0 "https://localhost:3129" \
@@ -28,7 +28,7 @@ check 1 "" \
   "otherorg/app" "https://api.gold.devops.gov.bc.ca:6443" "" \
   "unrelated org skips even with the default"
 check 1 "" \
-  "otherorg/app" "https://api.gold.devops.gov.bc.ca:6443" "https://oc-proxy.example" \
+  "otherorg/app" "https://api.gold.devops.gov.bc.ca:6443" "https://oc-runner.example" \
   "unrelated org skips even with an override"
 check 1 "" \
   "bcgov/action-oc-runner" "https://api.example.com:6443" "" \

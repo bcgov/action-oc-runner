@@ -7,10 +7,10 @@ set -uo pipefail
 if [ -z "${IN_CONTAINER:-}" ]; then
   set -e
   HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  podman build -q -t oc-connect-proxy:test "${HERE}" >/dev/null
+  podman build -q -t oc-runner:test "${HERE}" >/dev/null
   exec podman run --rm --cpus=2 --memory=1g --user root -e IN_CONTAINER=1 \
     -v "${HERE}/proxy_test.sh:/proxy_test.sh:ro,z" \
-    --entrypoint bash oc-connect-proxy:test /proxy_test.sh
+    --entrypoint bash oc-runner:test /proxy_test.sh
 fi
 
 fail() { echo "FAIL: $*" >&2; exit 1; }

@@ -70,27 +70,27 @@ jobs:
           openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
             -keyout tls.key -out tls.crt -subj "/CN=localhost" \
             -addext "subjectAltName=DNS:localhost" 2>/dev/null
-          sudo install -d -m 0755 /etc/oc-proxy-tls
-          sudo install -m 0644 tls.crt tls.key /etc/oc-proxy-tls/
+          sudo install -d -m 0755 /etc/oc-runner-tls
+          sudo install -m 0644 tls.crt tls.key /etc/oc-runner-tls/
           # oc and curl verify the proxy against the system trust store
-          sudo install -m 0644 tls.crt /usr/local/share/ca-certificates/oc-proxy.crt
+          sudo install -m 0644 tls.crt /usr/local/share/ca-certificates/oc-runner.crt
           sudo update-ca-certificates
 
-          podman build -q -t oc-connect-proxy:ci proxy
+          podman build -q -t oc-runner:ci proxy
           # Started before the runner's DNS is poisoned, and pinned to the real
           # address, so the proxy keeps a working route to the cluster
-          podman run -d --name oc-proxy -p 3129:3129 \
+          podman run -d --name oc-runner -p 3129:3129 \
             --add-host "${API_HOST}:${API_IP}" \
             -e API_HOSTS="${API_HOST}" \
-            -v /etc/oc-proxy-tls:/etc/squid/tls:ro \
-            oc-connect-proxy:ci
+            -v /etc/oc-runner-tls:/etc/squid/tls:ro \
+            oc-runner:ci
 
           for _ in $(seq 1 40); do
             (exec 3<>/dev/tcp/127.0.0.1/3129) 2>/dev/null && break
             sleep 0.5
           done
           (exec 3<>/dev/tcp/127.0.0.1/3129) 2>/dev/null \
-            || { podman logs oc-proxy; echo "::error::proxy did not start"; exit 1; }
+            || { podman logs oc-runner; echo "::error::proxy did not start"; exit 1; }
 
       # The action tries direct first, so make the direct route fail the way a
       # blocked runner does. 192.0.2.1 is TEST-NET-1 and goes nowhere. Only the
@@ -101,7 +101,7 @@ jobs:
           set -euo pipefail
           echo "192.0.2.1 ${API_HOST}" | sudo tee -a /etc/hosts > /dev/null
           echo "Runner now resolves ${API_HOST} to $(getent hosts "${API_HOST}" | awk '{print $1; exit}')"
-          echo "Proxy still resolves it to $(podman exec oc-proxy getent hosts "${API_HOST}" | awk '{print $1; exit}')"
+          echo "Proxy still resolves it to $(podman exec oc-runner getent hosts "${API_HOST}" | awk '{print $1; exit}')"
 
       # A successful login now proves the fallback engaged: there is no other route.
       - uses: ./
@@ -117,7 +117,7 @@ jobs:
         run: |
           set -euo pipefail
           # Read the log once; 'grep -q' in a pipeline would SIGPIPE podman and trip pipefail
-          podman logs oc-proxy > proxy.log 2>&1
+          podman logs oc-runner > proxy.log 2>&1
           grep TCP_ proxy.log || true
           grep -q "TCP_TUNNEL.*${GITHUB_REPOSITORY}" proxy.log \
             || { echo "::error::No tunnel logged for ${GITHUB_REPOSITORY}; traffic bypassed the proxy."; exit 1; }
