@@ -41,6 +41,88 @@ jobs:
             exit 1
           fi
 
+  proxy:
+    name: Test CONNECT Proxy Gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash scripts/should_use_proxy_test.sh
+      - run: bash proxy/proxy_test.sh
+
+  proxy-e2e:
+    name: Test Fallback Through Proxy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Run the proxy on this runner
+        run: |
+          set -euo pipefail
+          # Only the cluster this workflow logs into may be tunnelled to
+          API_HOST=$(echo "${{ vars.oc_server }}" | sed -E 's#^https://##; s#:[0-9]+$##')
+          API_IP=$(getent hosts "${API_HOST}" | awk '{print $1; exit}')
+          echo "Proxy will allow: ${API_HOST} (${API_IP})"
+          echo "API_HOST=${API_HOST}" >> "${GITHUB_ENV}"
+          echo "API_IP=${API_IP}" >> "${GITHUB_ENV}"
+
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
+            -keyout tls.key -out tls.crt -subj "/CN=localhost" \
+            -addext "subjectAltName=DNS:localhost" 2>/dev/null
+          sudo install -d -m 0755 /etc/oc-runner-tls
+          sudo install -m 0644 tls.crt tls.key /etc/oc-runner-tls/
+          # oc and curl verify the proxy against the system trust store
+          sudo install -m 0644 tls.crt /usr/local/share/ca-certificates/oc-runner.crt
+          sudo update-ca-certificates
+
+          podman build -q -t oc-runner:ci proxy
+          # Started before the runner's DNS is poisoned, and pinned to the real
+          # address, so the proxy keeps a working route to the cluster
+          podman run -d --name oc-runner -p 3129:3129 \
+            --add-host "${API_HOST}:${API_IP}" \
+            -e API_HOSTS="${API_HOST}" \
+            -v /etc/oc-runner-tls:/etc/squid/tls:ro \
+            oc-runner:ci
+
+          for _ in $(seq 1 40); do
+            (exec 3<>/dev/tcp/127.0.0.1/3129) 2>/dev/null && break
+            sleep 0.5
+          done
+          (exec 3<>/dev/tcp/127.0.0.1/3129) 2>/dev/null \
+            || { podman logs oc-runner; echo "::error::proxy did not start"; exit 1; }
+
+      # The action tries direct first, so make the direct route fail the way a
+      # blocked runner does. 192.0.2.1 is TEST-NET-1 and goes nowhere. Only the
+      # runner is affected; the container has its own hosts file and DNS, so the
+      # proxy is now the single working route to the cluster.
+      - name: Blackhole the cluster from the runner only
+        run: |
+          set -euo pipefail
+          echo "192.0.2.1 ${API_HOST}" | sudo tee -a /etc/hosts > /dev/null
+          echo "Runner now resolves ${API_HOST} to $(getent hosts "${API_HOST}" | awk '{print $1; exit}')"
+          echo "Proxy still resolves it to $(podman exec oc-runner getent hosts "${API_HOST}" | awk '{print $1; exit}')"
+
+      # A successful login now proves the fallback engaged: there is no other route.
+      - uses: ./
+        with:
+          oc_namespace: ${{ vars.oc_namespace }}
+          oc_server: ${{ vars.oc_server }}
+          oc_token: ${{ secrets.oc_token }}
+          oc_proxy: https://localhost:3129
+          commands: oc whoami
+          timeout: 1m
+
+      - name: Confirm the traffic actually went through the proxy
+        run: |
+          set -euo pipefail
+          # Read the log once; 'grep -q' in a pipeline would SIGPIPE podman and trip pipefail
+          podman logs oc-runner > proxy.log 2>&1
+          grep TCP_ proxy.log || true
+          grep -q "TCP_TUNNEL.*${GITHUB_REPOSITORY}" proxy.log \
+            || { echo "::error::No tunnel logged for ${GITHUB_REPOSITORY}; traffic bypassed the proxy."; exit 1; }
+          echo "Direct route was black-holed, so login could only have succeeded via the proxy."
+
   repository:
     name: Test Non-Default Repository
     needs: whoami
@@ -179,7 +261,7 @@ jobs:
   # ==========================================================================
   results:
     name: PR Results
-    needs: [whoami, repository, legacy, cronjob, test-failures]
+    needs: [whoami, proxy, proxy-e2e, repository, legacy, cronjob, test-failures]
     if: always()
     runs-on: ubuntu-24.04
     timeout-minutes: 1

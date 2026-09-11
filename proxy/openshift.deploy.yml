@@ -1,0 +1,103 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: oc-runner
+  annotations:
+    description: |
+      CONNECT proxy giving GitHub runners a different egress IP to the OpenShift API.
+      Callers authenticate with the GITHUB_TOKEN of the workflow using them, so no
+      shared secret is distributed. TLS is end-to-end, so the proxy cannot read
+      OpenShift tokens. Route is passthrough because squid terminates TLS itself.
+parameters:
+  - name: HOST
+    description: |
+      Route hostname; TLS_SECRET must hold a certificate valid for it
+      Example: oc-runner.apps.silver.devops.gov.bc.ca
+    required: true
+  - name: TLS_SECRET
+    description: |
+      Secret with tls.crt and tls.key for HOST
+      Example: oc-runner-tls
+    required: true
+  - name: IMAGE
+    description: |
+      Image built from proxy/Containerfile
+      Example: ghcr.io/bcgov/action-oc-runner/oc-runner:latest
+    required: true
+  - name: OWNER_REGEX
+    description: Only repositories matching this may use the proxy
+    value: "^bcgov(-c)?/"
+  - name: API_HOSTS
+    description: Space-separated API hostnames the proxy may tunnel to
+    value: "api.gold.devops.gov.bc.ca api.silver.devops.gov.bc.ca"
+  - name: APP
+    value: oc-runner
+objects:
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: ${APP}
+      labels: { app: "${APP}" }
+    spec:
+      replicas: 2
+      selector:
+        matchLabels: { app: "${APP}" }
+      template:
+        metadata:
+          labels: { app: "${APP}" }
+        spec:
+          containers:
+            - name: squid
+              image: ${IMAGE}
+              env:
+                - name: OWNER_REGEX
+                  value: ${OWNER_REGEX}
+                - name: API_HOSTS
+                  value: ${API_HOSTS}
+              ports:
+                - containerPort: 3129
+              volumeMounts:
+                - name: tls
+                  mountPath: /etc/squid/tls
+                  readOnly: true
+              readinessProbe:
+                tcpSocket: { port: 3129 }
+                initialDelaySeconds: 5
+              livenessProbe:
+                tcpSocket: { port: 3129 }
+                initialDelaySeconds: 15
+              resources:
+                requests: { cpu: 50m, memory: 128Mi }
+                limits: { memory: 256Mi }
+              securityContext:
+                allowPrivilegeEscalation: false
+                runAsNonRoot: true
+                capabilities: { drop: ["ALL"] }
+          volumes:
+            - name: tls
+              secret:
+                secretName: ${TLS_SECRET}
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: ${APP}
+      labels: { app: "${APP}" }
+    spec:
+      selector: { app: "${APP}" }
+      ports:
+        - port: 3129
+          targetPort: 3129
+  - apiVersion: route.openshift.io/v1
+    kind: Route
+    metadata:
+      name: ${APP}
+      labels: { app: "${APP}" }
+    spec:
+      host: ${HOST}
+      to:
+        kind: Service
+        name: ${APP}
+      port:
+        targetPort: 3129
+      tls:
+        termination: passthrough
