@@ -41,6 +41,14 @@ jobs:
             exit 1
           fi
 
+  proxy:
+    name: Test CONNECT Proxy Gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash proxy/proxy_test.sh
+
   repository:
     name: Test Non-Default Repository
     needs: whoami
@@ -179,7 +187,7 @@ jobs:
   # ==========================================================================
   results:
     name: PR Results
-    needs: [whoami, repository, legacy, cronjob, test-failures]
+    needs: [whoami, proxy, repository, legacy, cronjob, test-failures]
     if: always()
     runs-on: ubuntu-24.04
     timeout-minutes: 1

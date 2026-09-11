@@ -169,6 +169,50 @@ To handle transient network drops, cluster API restarts, or runner configuration
 - **Retry:** If the connection times out at the network layer (HTTP status `000`), hits a request timeout (`408`), gets rate-limited (`429`), or if the API returns a transient server error (HTTP status `5xx` during control-plane reboots), the action sleeps with exponential backoff (starting at 2 seconds) and retries up to `login_attempts` times.
 - **CLI Download Timeout:** Download of the `oc` CLI client archive from `mirror.openshift.com` is capped with a 15-second timeout and 3 retry attempts to prevent workflows from hanging indefinitely.
 
+# Blocked Runner IPs (oc_proxy)
+
+GitHub-hosted runners are sometimes unable to reach the OpenShift API, failing login with `curl: (28)` timeouts while the same cluster answers normally from elsewhere. The address the runner happens to get is blocked upstream, and neither the workflow nor this action can choose a different one.
+
+`oc_proxy` tunnels API traffic through a CONNECT proxy, so the cluster sees the proxy's address instead of the runner's:
+
+```yaml
+- uses: bcgov/action-oc-runner@vX.Y.Z
+  with:
+    oc_namespace: ${{ vars.oc_namespace }}
+    oc_server: ${{ vars.oc_server }}
+    oc_token: ${{ secrets.oc_token }}
+    oc_proxy: https://oc-proxy.apps.silver.devops.gov.bc.ca
+    commands: oc whoami
+```
+
+No new secret is needed. The action authenticates to the proxy with the calling workflow's `GITHUB_TOKEN`, passed as `owner/repo` plus token in the proxy URL. A `GITHUB_TOKEN` only authenticates for its own repository, so the proxy can confirm a caller really is a workflow in an allowed organization by asking `https://api.github.com/repos/<claimed-repo>`.
+
+Because it tunnels with `CONNECT`, TLS runs end-to-end between the runner and the cluster. **The proxy never sees your OpenShift token**, only encrypted bytes. It also refuses anything that is not a `CONNECT` to a declared API host on port 6443, so an authorized caller cannot use it as a general-purpose proxy.
+
+## Running the proxy
+
+`proxy/` holds everything needed: a squid config, the GitHub auth helper, a `Containerfile`, and an OpenShift template.
+
+```bash
+oc process -f proxy/openshift.deploy.yml \
+  -p HOST=oc-proxy.apps.silver.devops.gov.bc.ca \
+  -p TLS_SECRET=oc-proxy-tls \
+  -p IMAGE=ghcr.io/bcgov/action-oc-runner/oc-connect-proxy:latest \
+  -p OWNER_REGEX='^bcgov(-c)?/' | oc apply -f -
+```
+
+`OWNER_REGEX` decides who may use it and `API_HOSTS` decides which clusters it will reach; both are parameters, so this works for other organizations and clusters. The Route is passthrough because squid terminates TLS itself, which it must: proxy credentials are base64-encoded rather than encrypted, so a cleartext port would expose `GITHUB_TOKEN`s.
+
+Host it wherever is reachable. In-cluster keeps it under your control; anywhere with a stable address also works, and the proxy's blindness to OpenShift tokens is what makes that acceptable.
+
+`bash proxy/proxy_test.sh` builds the image and checks the gate against a fake GitHub and a fake API, so it needs no cluster or real credentials.
+
+## Limits
+
+This restricts use to an *organization*, not to this action. GitHub issues no identity for a composite action, and this repository is public, so any check tied to the action's own code could be reproduced by copying it. Organization membership is the strongest claim that can actually be verified.
+
+The proxy does receive repo-scoped `GITHUB_TOKEN`s, valid for the length of a job. Run it somewhere you trust.
+
 # Troubleshooting
 
 The `commands` block runs in strict shell mode. A command failure (including optional `grep` misses in pipelines) can stop the step immediately.

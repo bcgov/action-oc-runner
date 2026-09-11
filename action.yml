@@ -93,6 +93,16 @@ inputs:
       Example: 5, 10
     default: "5"
     pattern: "^[1-9][0-9]*$"
+  oc_proxy:
+    description: |
+      Tunnel OpenShift API traffic through a CONNECT proxy, changing the egress IP the
+      cluster sees. Useful when GitHub runner addresses are blocked. The proxy
+      authenticates callers with this workflow's GITHUB_TOKEN, so no extra secret is
+      needed, and TLS stays end-to-end, so the proxy never sees your OpenShift token.
+      Empty (default) connects directly. See proxy/ to run one.
+      Example: https://oc-proxy.example.com:3129
+    default: ""
+    pattern: '^$|^https?://[A-Za-z0-9._-]+(:[0-9]{1,5})?$'
 
 outputs:
   commands:
@@ -129,6 +139,7 @@ runs:
     - if: steps.diff.outputs.triggered == 'true'
       env:
         OC: ${{ format('stable-{0}', inputs.oc_version) }}
+        ACTION_GITHUB_TOKEN: ${{ inputs.github_token }}
       shell: bash
       working-directory: /usr/local/bin
       run: |
@@ -176,6 +187,39 @@ runs:
           rm -f oc.tar.gz
         fi
 
+        # Tunnel API traffic through the CONNECT proxy when one is configured. The
+        # proxy authenticates callers with this workflow's GITHUB_TOKEN, so the
+        # credential travels in the proxy URL; oc and curl both send it on CONNECT.
+        # Set after the CLI download so fetching oc is never proxied.
+        OC_PROXY="${{ inputs.oc_proxy }}"
+        if [ -n "${OC_PROXY}" ]; then
+          if [[ ! "${OC_PROXY}" =~ ^https?://[A-Za-z0-9._-]+(:[0-9]{1,5})?$ ]]; then
+            echo "::error::Invalid oc_proxy '${OC_PROXY}'. Use http(s)://host[:port], with no credentials, path or query."
+            exit 1
+          fi
+          if [ -z "${ACTION_GITHUB_TOKEN}" ]; then
+            echo "::error::oc_proxy needs github_token to authenticate to the proxy."
+            exit 1
+          fi
+          PROXY_URL="${OC_PROXY%%://*}://${GITHUB_REPOSITORY//\//%2F}:${ACTION_GITHUB_TOKEN}@${OC_PROXY#*://}"
+          echo "::add-mask::${PROXY_URL}"
+          NO_PROXY_LIST="localhost,127.0.0.1,github.com,.github.com,api.github.com,githubusercontent.com,.githubusercontent.com,ghcr.io,mirror.openshift.com"
+
+          export HTTPS_PROXY="${PROXY_URL}" https_proxy="${PROXY_URL}"
+          export NO_PROXY="${NO_PROXY_LIST}" no_proxy="${NO_PROXY_LIST}"
+
+          # Later steps run after a checkout that can replace this action's files,
+          # so hand the settings over through the environment instead of re-deriving.
+          {
+            echo "HTTPS_PROXY=${PROXY_URL}"
+            echo "https_proxy=${PROXY_URL}"
+            echo "NO_PROXY=${NO_PROXY_LIST}"
+            echo "no_proxy=${NO_PROXY_LIST}"
+          } >> "${GITHUB_ENV}"
+
+          echo "OpenShift API traffic will tunnel through ${OC_PROXY}"
+        fi
+
         # OpenShift login with smart retry
         DELAY=2
         SA_TOKEN_URL="${SERVER_URL}/api/v1/namespaces/${NAMESPACE}/serviceaccounts/pipeline/token"
@@ -186,7 +230,10 @@ runs:
           
           # Fetch token response with HTTP code directly to memory
           ERR_FILE=$(mktemp)
-          RESPONSE=$(curl -ksS -4 --connect-timeout 10 --max-time 30 -w "%{http_code}" -X POST "${SA_TOKEN_URL}" \
+          # No -k here. This request carries oc_token in an Authorization header, so
+          # skipping certificate checks would let anything on the path, including a
+          # proxy, read a long-lived OpenShift token.
+          RESPONSE=$(curl -sS -4 --connect-timeout 10 --max-time 30 -w "%{http_code}" -X POST "${SA_TOKEN_URL}" \
             --header "Authorization: Bearer ${TOKEN_INPUT}" \
             --header "Content-Type: application/json; charset=utf-8" \
             --data '{"spec": {"expirationSeconds": 1500 }}' 2>"$ERR_FILE") || true
