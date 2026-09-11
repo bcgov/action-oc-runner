@@ -2,8 +2,10 @@ apiVersion: template.openshift.io/v1
 kind: Template
 parameters:
   ### Required - do not hard code
-  - name: CLUSTER
-    description: Cluster this relay serves, e.g. silver, gold, emerald
+  - name: HOST
+    description: |
+      Route hostname for this cluster's relay; must match the oc_relay input
+      Example: oc-relay.apps.silver.devops.gov.bc.ca
     required: true
 
   ### Recommended - suggest hard coding
@@ -142,7 +144,7 @@ objects:
       labels:
         app: ${APP}
     spec:
-      host: ${APP}.apps.${CLUSTER}.devops.gov.bc.ca
+      host: ${HOST}
       to:
         kind: Service
         name: ${APP}

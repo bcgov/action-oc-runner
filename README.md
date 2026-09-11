@@ -174,11 +174,14 @@ GitHub-hosted runners get rotating Azure IPs. When a cluster drops some of those
 
 The relay is an nginx reverse proxy that runs **on the cluster** and forwards to the in-cluster API (`kubernetes.default.svc`). GitHub talks to a normal Route on `*.apps.<cluster>` port 443 instead of `api.<cluster>` port 6443. It holds no credentials and passes your `Authorization` header straight through, and it can only reach its own cluster's API, so it is not an open proxy.
 
-Deploy one per cluster, then point the action at it:
+Each cluster needs its own relay, because a relay only ever talks to the API of the cluster it runs on. Deploy one per cluster from a machine that can already reach that cluster, such as a laptop:
 
 ```bash
-# From a machine that can already reach the cluster, e.g. a laptop
-oc process -f relay/openshift.deploy.yml -p CLUSTER=silver | oc apply -f -
+oc process -f relay/openshift.deploy.yml \
+  -p HOST=oc-relay.apps.silver.devops.gov.bc.ca | oc apply -f -
+
+oc process -f relay/openshift.deploy.yml \
+  -p HOST=oc-relay.apps.gold.devops.gov.bc.ca | oc apply -f -
 ```
 
 ```yaml
@@ -191,7 +194,7 @@ oc process -f relay/openshift.deploy.yml -p CLUSTER=silver | oc apply -f -
     commands: oc whoami
 ```
 
-`{cluster}` is substituted from `oc_server`, so one string covers silver, gold, and emerald. `oc_server` stays as-is; it is only used to pick the cluster.
+`{cluster}` is the label after `api.` in `oc_server`, so a single `oc_relay` string covers silver, gold, emerald, and any other cluster whose API is `https://api.<cluster>.<domain>:6443`. Callers keep passing their existing `oc_server` and nothing else changes. Omit `{cluster}` to pin one fixed relay host.
 
 **Rolling this out to many repositories:** set the `oc_relay` default in `action.yml` and tag a release. Dependents that never pass `oc_relay` pick it up on their next Renovate bump, with no change to their workflow files. The default ships empty, so nothing routes through a relay until you deploy one and set it.
 
