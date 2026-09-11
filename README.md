@@ -191,7 +191,7 @@ Because it tunnels with `CONNECT`, TLS runs end-to-end between the runner and th
 
 ## Running the proxy
 
-`proxy/` holds everything needed: a squid config, the GitHub auth helper, a `Containerfile`, and an OpenShift template.
+`proxy/` holds everything needed: a squid config, the GitHub auth helper, a `Containerfile`, and an OpenShift template. Pushes to `main` that touch `proxy/` publish `ghcr.io/bcgov/action-oc-runner/oc-connect-proxy`, tagged `latest` and by commit SHA, but only after the access gate passes. The package starts private, so either make it public or give the namespace a pull secret.
 
 ```bash
 oc process -f proxy/openshift.deploy.yml \
