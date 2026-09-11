@@ -171,9 +171,12 @@ To handle transient network drops, cluster API restarts, or runner configuration
 
 # oc-runner proxy
 
-A CONNECT proxy for blocked GitHub runner IPs lives in `proxy/` and deploys to `32d13a-prod` on Silver. PRs and pushes to `main` that touch `proxy/` run `.github/workflows/oc-runner.yml`: test the gate, push `ghcr.io/bcgov/action-oc-runner/oc-runner`, then apply the template. PR images are tagged `pr-<number>`; `main` tags `latest`.
+A CONNECT proxy for blocked GitHub runner IPs lives in `proxy/`. `.github/workflows/oc-runner.yml` follows the same promotion shape as [quickstart-openshift](https://github.com/bcgov/quickstart-openshift):
 
-The package starts private. Create a `ghcr` pull secret in `32d13a-prod` and a TLS secret `oc-runner-tls` whose certificate is valid for `oc-runner.apps.silver.devops.gov.bc.ca`. The deploy job fails fast if either is missing.
+- **PR:** `action-builder-ghcr` publishes `oc-runner` with OCI revision labels, tagged with the PR number and head SHA. That image deploys to `32d13a-dev` as `oc-runner-<pr>` at `oc-runner-<pr>.apps.silver.devops.gov.bc.ca`. An e2e job CONNECTs through that Route to Silver's API. Close deletes the stack (and its throwaway TLS secret).
+- **Merge:** does not rebuild. [`image-tracker`](https://github.com/bcgov/actions/tree/main/image-tracker) resolves the digest for this commit and deploys that immutable reference to `32d13a-prod` at `oc-runner.apps.silver.devops.gov.bc.ca`.
+
+The GHCR package starts private. Create a `ghcr` pull secret in both namespaces. Prod also needs `oc-runner-tls` (certificate valid for the stable hostname). PR stacks mint their own cert.
 
 # Troubleshooting
 
