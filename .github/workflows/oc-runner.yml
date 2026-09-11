@@ -6,13 +6,18 @@ on:
       - proxy/**
       - .github/workflows/oc-runner.yml
   push:
+    branches: [main]
     paths:
       - proxy/**
       - .github/workflows/oc-runner.yml
   workflow_dispatch:
+    inputs:
+      pr:
+        description: Open PR number to deploy and test as oc-runner-<pr>
+        required: true
 
 concurrency:
-  group: oc-runner-${{ github.event.pull_request.number || github.ref_name }}
+  group: oc-runner-${{ github.event.pull_request.number || inputs.pr || github.workflow }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions: {}
@@ -29,10 +34,9 @@ jobs:
       - uses: actions/checkout@v7
       - run: bash proxy/proxy_test.sh
 
-  # Workflow edits in a PR only fire push; resolve the open PR for that branch.
   pr:
     name: Resolve PR
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref != 'refs/heads/main')
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -51,16 +55,14 @@ jobs:
             echo "number=${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
             echo "sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
           else
-            n="$(gh pr list --repo "${GITHUB_REPOSITORY}" --head "${GITHUB_REF_NAME}" --state open --json number -q '.[0].number')"
-            [ -n "${n}" ] || { echo "::error::no open PR for branch ${GITHUB_REF_NAME}"; exit 1; }
-            echo "number=${n}" >> "$GITHUB_OUTPUT"
+            echo "number=${{ inputs.pr }}" >> "$GITHUB_OUTPUT"
             echo "sha=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
           fi
 
   # PR: build with OCI revision labels so image-tracker can resolve this commit later
   build:
     name: Build Image
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref != 'refs/heads/main')
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     needs: [test, pr]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -85,7 +87,7 @@ jobs:
   # Isolated stack in 32d13a-dev. Prod is untouched until merge.
   deploy-pr:
     name: Deploy PR (${{ needs.pr.outputs.number }})
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref != 'refs/heads/main')
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     needs: [build, pr]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -128,7 +130,7 @@ jobs:
   # Drive real API traffic through oc-runner-<pr> and prove the gate on the Route.
   e2e:
     name: Test PR Proxy
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref != 'refs/heads/main')
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     needs: [deploy-pr, pr]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
