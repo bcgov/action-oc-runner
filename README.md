@@ -173,7 +173,7 @@ To handle transient network drops, cluster API restarts, or runner configuration
 
 A CONNECT proxy for blocked GitHub runner IPs lives in `proxy/`. `.github/workflows/oc-runner.yml` follows the same promotion shape as [quickstart-openshift](https://github.com/bcgov/quickstart-openshift):
 
-- **PR:** `action-builder-ghcr` publishes `oc-runner` with OCI revision labels, tagged with the PR number and head SHA. That image deploys to `32d13a-dev` as `oc-runner-<pr>` at `oc-runner-<pr>.apps.silver.devops.gov.bc.ca`. An e2e job CONNECTs through that Route to Silver's API. Close deletes the stack (and its throwaway TLS secret).
+- **PR:** `action-builder-ghcr` publishes `oc-runner` with OCI revision labels, tagged with the PR number and head SHA. That image deploys to `32d13a-dev` as `oc-runner-<pr>` at `oc-runner-<pr>.apps.silver.devops.gov.bc.ca`. `proxy/pr_e2e.sh` CONNECTs through that Route: silver and gold `/version` must return kube JSON; unauthenticated, bad token, spoofed repo, undeclared host, and port 443 must not. Then the action logs in through the same Route and squid must log `TCP_TUNNEL` for this repository. Close deletes the stack (and its throwaway TLS secret).
 - **Merge:** does not rebuild. [`image-tracker`](https://github.com/bcgov/actions/tree/main/image-tracker) resolves the digest for this commit and deploys that immutable reference to `32d13a-prod` at `oc-runner.apps.silver.devops.gov.bc.ca`.
 
 The GHCR package starts private. Create a `ghcr` pull secret in both namespaces. Prod also needs `oc-runner-tls` (certificate valid for the stable hostname). PR stacks mint their own cert.

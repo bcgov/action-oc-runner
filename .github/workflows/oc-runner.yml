@@ -91,40 +91,73 @@ jobs:
               -p OWNER_REGEX='^bcgov(-c)?/' | oc apply -f -
             oc rollout status "deploy/oc-runner-${PR}" --timeout=5m
 
-  # Blocked-runner stand-in: talk to Silver's API only through this PR's Route.
+  # Drive real API traffic through oc-runner-<pr> and prove the gate on the Route.
   e2e:
     name: Test PR Proxy
     if: github.event_name == 'pull_request'
     needs: [deploy-pr]
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 15
     permissions:
       contents: read
+    env:
+      PROXY_HOST: oc-runner-${{ github.event.number }}.apps.silver.devops.gov.bc.ca
     steps:
-      - name: CONNECT through the PR Route
+      - uses: actions/checkout@v7
+
+      - name: curl through the PR Route
         env:
           TOKEN: ${{ github.token }}
-          HOST: oc-runner-${{ github.event.number }}.apps.silver.devops.gov.bc.ca
+        run: bash proxy/pr_e2e.sh
+
+      - name: Trust the PR Route certificate
         run: |
           set -euo pipefail
-          API="https://api.silver.devops.gov.bc.ca:6443/version"
-          PROXY="https://${HOST}"
-          AUTH_PROXY="https://${GITHUB_REPOSITORY//\//%2F}:${TOKEN}@${HOST}"
+          echo | openssl s_client -connect "${PROXY_HOST}:443" -servername "${PROXY_HOST}" 2>/dev/null \
+            | openssl x509 > pr-proxy.crt
+          sudo install -m 0644 pr-proxy.crt /usr/local/share/ca-certificates/oc-runner-pr.crt
+          sudo update-ca-certificates
 
-          code=""
-          for _ in $(seq 1 30); do
-            code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 \
-              --proxy-insecure --proxy "${PROXY}" "${API}" || true)"
-            [ -n "${code}" ] && [ "${code}" != "000" ] && break
-            sleep 5
-          done
-          [ "${code}" != "200" ] || { echo "::error::unauthenticated request must not tunnel"; exit 1; }
-          echo "unauthenticated -> ${code}"
+      - name: Point oc at the PR proxy
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          PROXY_URL="https://${GITHUB_REPOSITORY//\//%2F}:${TOKEN}@${PROXY_HOST}"
+          echo "::add-mask::${PROXY_URL}"
+          {
+            echo "HTTPS_PROXY=${PROXY_URL}"
+            echo "https_proxy=${PROXY_URL}"
+            echo "NO_PROXY=localhost,127.0.0.1,github.com,.github.com,api.github.com,githubusercontent.com,.githubusercontent.com,ghcr.io,mirror.openshift.com"
+            echo "no_proxy=localhost,127.0.0.1,github.com,.github.com,api.github.com,githubusercontent.com,.githubusercontent.com,ghcr.io,mirror.openshift.com"
+          } >> "${GITHUB_ENV}"
 
-          code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 \
-            --proxy-insecure --proxy "${AUTH_PROXY}" "${API}")"
-          [ "${code}" = "200" ] || { echo "::error::workflow token should tunnel, got ${code}"; exit 1; }
-          echo "workflow token -> ${code}"
+      # Same login the action's callers run, forced through this PR's proxy.
+      - uses: ./
+        with:
+          oc_namespace: ${{ vars.oc_namespace }}
+          oc_server: ${{ vars.oc_server }}
+          oc_token: ${{ secrets.oc_token }}
+          commands: |
+            oc whoami
+            oc version
+          timeout: 2m
+
+      # Direct oc: the tunnels must have been logged on the PR stack.
+      - uses: ./
+        env:
+          HTTPS_PROXY: ""
+          https_proxy: ""
+        with:
+          oc_namespace: ${{ vars.oc_namespace }}
+          oc_server: ${{ vars.oc_server }}
+          oc_token: ${{ secrets.oc_token }}
+          commands: |
+            oc logs -l app=oc-runner-${{ github.event.number }} --tail=200 --all-containers > /tmp/oc-runner.log
+            grep TCP_ /tmp/oc-runner.log || true
+            grep -q "TCP_TUNNEL.*${GITHUB_REPOSITORY}" /tmp/oc-runner.log \
+              || { echo "::error::squid did not log a tunnel for ${GITHUB_REPOSITORY}"; exit 1; }
+          timeout: 2m
 
   # Merge: do not rebuild. Resolve the image that was built for this commit.
   track:
