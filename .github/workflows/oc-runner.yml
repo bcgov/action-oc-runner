@@ -183,12 +183,12 @@ jobs:
       - uses: ./
         env:
           HTTPS_PROXY: ""
-          https_proxy: ""
         with:
           oc_namespace: ${{ vars.oc_namespace }}
           oc_server: ${{ vars.oc_server }}
           oc_token: ${{ secrets.oc_token }}
           commands: |
+            unset https_proxy HTTP_PROXY http_proxy
             oc logs -l app=oc-runner-${{ needs.pr.outputs.number }} --tail=200 --all-containers > /tmp/oc-runner.log
             grep TCP_ /tmp/oc-runner.log || true
             grep -q "TCP_TUNNEL.*${GITHUB_REPOSITORY}" /tmp/oc-runner.log \
