@@ -18,4 +18,5 @@ export OWNER_REGEX API_HOSTS REALM
 envsubst '${OWNER_REGEX} ${API_HOSTS} ${REALM}' \
   < /etc/squid/squid.conf.template > /tmp/squid.conf
 
-exec squid -f /tmp/squid.conf -N -d1
+# No -d1; cache_log already goes to stderr and the two together double every line
+exec squid -f /tmp/squid.conf -N
