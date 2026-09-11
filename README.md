@@ -169,6 +169,17 @@ To handle transient network drops, cluster API restarts, or runner configuration
 - **Retry:** If the connection times out at the network layer (HTTP status `000`), hits a request timeout (`408`), gets rate-limited (`429`), or if the API returns a transient server error (HTTP status `5xx` during control-plane reboots), the action sleeps with exponential backoff (starting at 2 seconds) and retries up to `login_attempts` times.
 - **CLI Download Timeout:** Download of the `oc` CLI client archive from `mirror.openshift.com` is capped with a 15-second timeout and 3 retry attempts to prevent workflows from hanging indefinitely.
 
+# oc-runner proxy
+
+A CONNECT proxy for blocked GitHub runner IPs lives in `proxy/`. `.github/workflows/oc-runner.yml` follows the same promotion shape as [quickstart-openshift](https://github.com/bcgov/quickstart-openshift):
+
+- **PR:** `action-builder-ghcr` publishes `oc-runner` with OCI revision labels, tagged with the PR number and head SHA. That image deploys to `32d13a-dev` as `oc-runner-<pr>` at `oc-runner-<pr>.apps.silver.devops.gov.bc.ca`. `proxy/pr_e2e.sh` CONNECTs through that Route: silver and gold `/version` must return kube JSON; unauthenticated, bad token, spoofed repo, undeclared host, and port 443 must not. Then the action logs in through the same Route and squid must log `TCP_TUNNEL` for this repository. Close deletes the stack (and its throwaway TLS secret).
+- **Merge:** does not rebuild. [`image-tracker`](https://github.com/bcgov/actions/tree/main/image-tracker) resolves the digest for this commit and deploys that immutable reference to `32d13a-prod` at `oc-runner.apps.silver.devops.gov.bc.ca`.
+
+The GHCR package starts private. Deploy jobs bootstrap a `ghcr` pull secret from `GITHUB_TOKEN` (`packages: read`). Prod also needs `oc-runner-tls` (certificate valid for the stable hostname). PR stacks mint their own cert.
+
+Until this workflow is on `main`, workflow edits in the PR only register as push events (which use the default-branch definition). Use **Actions → oc-runner → Run workflow** on the PR branch with the PR number to exercise build → deploy-pr → e2e.
+
 # Troubleshooting
 
 The `commands` block runs in strict shell mode. A command failure (including optional `grep` misses in pipelines) can stop the step immediately.

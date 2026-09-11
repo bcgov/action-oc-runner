@@ -1,0 +1,263 @@
+name: oc-runner
+
+on:
+  pull_request:
+    paths:
+      - proxy/**
+      - .github/workflows/oc-runner.yml
+  push:
+    branches: [main]
+    paths:
+      - proxy/**
+      - .github/workflows/oc-runner.yml
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: Open PR number to deploy and test as oc-runner-<pr>
+        required: true
+
+concurrency:
+  group: oc-runner-${{ github.event.pull_request.number || inputs.pr || github.workflow }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions: {}
+
+env:
+  IMAGE_NAME: ghcr.io/bcgov/action-oc-runner/oc-runner
+
+jobs:
+  test:
+    name: Test Proxy Gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash proxy/proxy_test.sh
+
+  pr:
+    name: Resolve PR
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      number: ${{ steps.pr.outputs.number }}
+      sha: ${{ steps.pr.outputs.sha }}
+    steps:
+      - id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+            echo "number=${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+            echo "sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "number=${{ inputs.pr }}" >> "$GITHUB_OUTPUT"
+            echo "sha=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+          fi
+
+  # PR: build with OCI revision labels so image-tracker can resolve this commit later
+  build:
+    name: Build Image
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    needs: [test, pr]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      attestations: write
+      contents: read
+      id-token: write
+      packages: write
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - uses: bcgov/action-builder-ghcr@cb2629351c87dd1c2130073e4ebb7233a9653a63 # v4.4.1
+        id: build
+        with:
+          package: oc-runner
+          build_context: proxy
+          build_file: proxy/Containerfile
+          tags: |
+            ${{ needs.pr.outputs.number }}
+            ${{ needs.pr.outputs.sha }}
+
+  # Isolated stack in 32d13a-dev. Prod is untouched until merge.
+  deploy-pr:
+    name: Deploy PR (${{ needs.pr.outputs.number }})
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    needs: [build, pr]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./
+        env:
+          IMAGE: ${{ env.IMAGE_NAME }}@${{ needs.build.outputs.digest }}
+          PR: ${{ needs.pr.outputs.number }}
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          oc_namespace: ${{ vars.oc_namespace }}
+          oc_server: ${{ vars.oc_server }}
+          oc_token: ${{ secrets.oc_token }}
+          commands: |
+            HOST="oc-runner-${PR}.apps.silver.devops.gov.bc.ca"
+            openssl req -x509 -newkey rsa:2048 -nodes -days 7 \
+              -keyout tls.key -out tls.crt -subj "/CN=${HOST}" \
+              -addext "subjectAltName=DNS:${HOST}"
+            oc create secret tls "oc-runner-tls-${PR}" \
+              --cert=tls.crt --key=tls.key --dry-run=client -o yaml | oc apply -f -
+            oc create secret docker-registry ghcr \
+              --docker-server=ghcr.io \
+              --docker-username="${{ github.actor }}" \
+              --docker-password="${GITHUB_TOKEN}" \
+              --docker-email=unused \
+              --dry-run=client -o yaml | oc apply -f -
+            oc process -f proxy/openshift.deploy.yml \
+              -p APP="oc-runner-${PR}" \
+              -p HOST="${HOST}" \
+              -p TLS_SECRET="oc-runner-tls-${PR}" \
+              -p IMAGE="${IMAGE}" \
+              -p IMAGE_PULL_SECRET=ghcr \
+              -p OWNER_REGEX='^bcgov(-c)?/' | oc apply -f -
+            oc rollout status "deploy/oc-runner-${PR}" --timeout=5m
+
+  # Drive real API traffic through oc-runner-<pr> and prove the gate on the Route.
+  e2e:
+    name: Test PR Proxy
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    needs: [deploy-pr, pr]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      PROXY_HOST: oc-runner-${{ needs.pr.outputs.number }}.apps.silver.devops.gov.bc.ca
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: curl through the PR Route
+        env:
+          TOKEN: ${{ github.token }}
+        run: bash proxy/pr_e2e.sh
+
+      - name: Trust the PR Route certificate
+        run: |
+          set -euo pipefail
+          echo | openssl s_client -connect "${PROXY_HOST}:443" -servername "${PROXY_HOST}" 2>/dev/null \
+            | openssl x509 > pr-proxy.crt
+          sudo install -m 0644 pr-proxy.crt /usr/local/share/ca-certificates/oc-runner-pr.crt
+          sudo update-ca-certificates
+
+      - name: Point oc at the PR proxy
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          PROXY_URL="https://${GITHUB_REPOSITORY//\//%2F}:${TOKEN}@${PROXY_HOST}"
+          echo "::add-mask::${PROXY_URL}"
+          {
+            echo "HTTPS_PROXY=${PROXY_URL}"
+            echo "https_proxy=${PROXY_URL}"
+            echo "NO_PROXY=localhost,127.0.0.1,github.com,.github.com,api.github.com,githubusercontent.com,.githubusercontent.com,ghcr.io,mirror.openshift.com"
+            echo "no_proxy=localhost,127.0.0.1,github.com,.github.com,api.github.com,githubusercontent.com,.githubusercontent.com,ghcr.io,mirror.openshift.com"
+          } >> "${GITHUB_ENV}"
+
+      # Same login the action's callers run, forced through this PR's proxy.
+      - uses: ./
+        with:
+          oc_namespace: ${{ vars.oc_namespace }}
+          oc_server: ${{ vars.oc_server }}
+          oc_token: ${{ secrets.oc_token }}
+          commands: |
+            oc whoami
+            oc version
+          timeout: 2m
+
+      # Direct oc: the tunnels must have been logged on the PR stack.
+      - uses: ./
+        env:
+          HTTPS_PROXY: ""
+        with:
+          oc_namespace: ${{ vars.oc_namespace }}
+          oc_server: ${{ vars.oc_server }}
+          oc_token: ${{ secrets.oc_token }}
+          commands: |
+            unset https_proxy HTTP_PROXY http_proxy
+            oc logs -l app=oc-runner-${{ needs.pr.outputs.number }} --tail=200 --all-containers > /tmp/oc-runner.log
+            grep TCP_ /tmp/oc-runner.log || true
+            grep -q "TCP_TUNNEL.*${GITHUB_REPOSITORY}" /tmp/oc-runner.log \
+              || { echo "::error::squid did not log a tunnel for ${GITHUB_REPOSITORY}"; exit 1; }
+          timeout: 2m
+
+  # Merge: do not rebuild. Resolve the image that was built for this commit.
+  track:
+    name: Track Image
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [test]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      packages: read
+      pull-requests: read
+    outputs:
+      image: ${{ steps.tracker.outputs.image }}
+      pr: ${{ steps.tracker.outputs.pr }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: tracker
+        uses: bcgov/actions/image-tracker@da76e0da09b8a8ceef61486208cdac75dac616c6 # v0.6.0
+        with:
+          package: oc-runner
+      - name: Require a digest
+        run: |
+          set -euo pipefail
+          if [ -z "${{ steps.tracker.outputs.image }}" ]; then
+            echo "::error::image-tracker found no oc-runner image for this commit. The PR build must have published one with OCI revision labels."
+            exit 1
+          fi
+          echo "PR ${{ steps.tracker.outputs.pr }} -> ${{ steps.tracker.outputs.image }}"
+
+  deploy-prod:
+    name: Deploy prod (PR ${{ needs.track.outputs.pr }})
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [track]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./
+        env:
+          IMAGE: ${{ needs.track.outputs.image }}
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          oc_namespace: 32d13a-prod
+          oc_server: ${{ vars.oc_server }}
+          oc_token: ${{ secrets.oc_token }}
+          commands: |
+            oc get secret oc-runner-tls
+            oc create secret docker-registry ghcr \
+              --docker-server=ghcr.io \
+              --docker-username="${{ github.actor }}" \
+              --docker-password="${GITHUB_TOKEN}" \
+              --docker-email=unused \
+              --dry-run=client -o yaml | oc apply -f -
+            oc process -f proxy/openshift.deploy.yml \
+              -p APP=oc-runner \
+              -p HOST=oc-runner.apps.silver.devops.gov.bc.ca \
+              -p TLS_SECRET=oc-runner-tls \
+              -p IMAGE="${IMAGE}" \
+              -p IMAGE_PULL_SECRET=ghcr \
+              -p OWNER_REGEX='^bcgov(-c)?/' | oc apply -f -
+            oc rollout status deploy/oc-runner --timeout=5m
