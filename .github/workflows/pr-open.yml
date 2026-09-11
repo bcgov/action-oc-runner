@@ -48,56 +48,7 @@ jobs:
       - uses: actions/checkout@v7
       - run: bash scripts/apply_proxy_env_test.sh
       - run: bash scripts/resolve_server_test.sh
-
-  whoami-proxy:
-    name: Test Command via CONNECT Proxy
-    needs: [whoami, proxy-env]
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v7
-      - name: Start local CONNECT proxy
-        run: |
-          PROXY_LOG="${RUNNER_TEMP}/connect-proxy.log"
-          python3 scripts/connect_proxy.py --listen 127.0.0.1 --port 8888 --log "${PROXY_LOG}" &
-          echo $! > "${RUNNER_TEMP}/connect-proxy.pid"
-          python3 - <<'PY'
-          import socket, time, sys
-          for _ in range(50):
-              try:
-                  socket.create_connection(("127.0.0.1", 8888), 1).close()
-                  sys.exit(0)
-              except OSError:
-                  time.sleep(0.1)
-          sys.exit("CONNECT proxy did not bind")
-          PY
-      - id: whoami-proxy
-        uses: ./
-        with:
-          commands: |
-            oc whoami
-            echo "whoami-proxy-ok" >> "$GITHUB_OUTPUT"
-          proxy: http://127.0.0.1:8888
-          oc_namespace: ${{ vars.oc_namespace }}
-          oc_server: ${{ vars.oc_server }}
-          oc_token: ${{ secrets.oc_token }}
-          timeout: 1m
-          triggers: ('.github/' 'action.yml' 'scripts/')
-      - if: steps.whoami-proxy.outputs.triggered != 'false'
-        run: |
-          echo "Outputs: ${{ toJSON(steps.whoami-proxy.outputs) }}"
-          if [ "${{ steps.whoami-proxy.outputs.triggered }}" != "true" ]; then
-            echo "Error!  Verify outputs."
-            exit 1
-          fi
-          if [ "${{ steps.whoami-proxy.outputs.commands }}" != "whoami-proxy-ok" ]; then
-            echo "Error! Generic commands output did not match expected value."
-            exit 1
-          fi
-          if ! grep -q ':6443$' "${RUNNER_TEMP}/connect-proxy.log"; then
-            echo "Error: CONNECT proxy log has no :6443 hop."
-            cat "${RUNNER_TEMP}/connect-proxy.log"
-            exit 1
-          fi
+      - run: bash scripts/relay_shim_test.sh
 
   tor-egress:
     name: Test Tor Changes Egress IP
@@ -260,7 +211,7 @@ jobs:
   # ==========================================================================
   results:
     name: PR Results
-    needs: [whoami, proxy-env, whoami-proxy, tor-egress, repository, legacy, cronjob, test-failures]
+    needs: [whoami, proxy-env, tor-egress, repository, legacy, cronjob, test-failures]
     if: always()
     runs-on: ubuntu-24.04
     timeout-minutes: 1

@@ -149,6 +149,7 @@ runs:
       env:
         OC: ${{ format('stable-{0}', inputs.oc_version) }}
         ACTION_PROXY: ${{ inputs.proxy }}
+        ACTION_GITHUB_TOKEN: ${{ inputs.github_token }}
       shell: bash
       working-directory: /usr/local/bin
       run: |
@@ -181,6 +182,31 @@ runs:
         SERVER_URL=$(OC_SERVER="${SERVER_URL}" OC_RELAY="${{ inputs.oc_relay }}" \
           "${GITHUB_ACTION_PATH}/scripts/resolve_server.sh") || exit 1
         echo "OpenShift API endpoint: ${SERVER_URL}"
+
+        # The relay only accepts workflows from its configured GitHub organization.
+        # 'oc' cannot send the identity headers itself, so route it via a local shim.
+        if [ -n "${{ inputs.oc_relay }}" ]; then
+          TOKEN_FILE=$(mktemp)
+          chmod 600 "${TOKEN_FILE}"
+          printf '%s' "${ACTION_GITHUB_TOKEN}" > "${TOKEN_FILE}"
+          nohup python3 "${GITHUB_ACTION_PATH}/scripts/relay_shim.py" \
+            --relay "${SERVER_URL}" \
+            --repository "${GITHUB_REPOSITORY}" \
+            --token-file "${TOKEN_FILE}" \
+            --listen-port 7443 >"${RUNNER_TEMP}/relay-shim.log" 2>&1 &
+          disown || true
+
+          for _ in $(seq 1 50); do
+            (exec 3<>/dev/tcp/127.0.0.1/7443) 2>/dev/null && break
+            sleep 0.2
+          done
+          if ! (exec 3<>/dev/tcp/127.0.0.1/7443) 2>/dev/null; then
+            echo "::error::Relay shim failed to start."
+            cat "${RUNNER_TEMP}/relay-shim.log"
+            exit 1
+          fi
+          SERVER_URL="http://127.0.0.1:7443"
+        fi
 
         # Install CLI Tool and Login
         # Check if oc is already installed

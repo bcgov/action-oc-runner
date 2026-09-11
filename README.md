@@ -178,15 +178,20 @@ The relay is an nginx reverse proxy that runs **on the cluster** and forwards to
 Each cluster needs its own relay, because a relay only ever talks to the API of the cluster it runs on. Deploy one per cluster from a machine that can already reach that cluster, such as a laptop:
 
 ```bash
-oc process -f relay/openshift.deploy.yml \
-  -p HOST=oc-relay.apps.silver.devops.gov.bc.ca | oc apply -f -
-
-oc process -f relay/openshift.deploy.yml \
-  -p HOST=oc-relay.apps.gold.devops.gov.bc.ca | oc apply -f -
-
-oc process -f relay/openshift.deploy.yml \
-  -p HOST=oc-relay.apps.emerald.devops.gov.bc.ca | oc apply -f -
+for CLUSTER in silver gold emerald; do
+  oc process -f relay/openshift.deploy.yml \
+    -p HOST=oc-relay.apps.${CLUSTER}.devops.gov.bc.ca \
+    -p GITHUB_OWNER=bcgov | oc apply -f -
+done
 ```
+
+## Who can use the relay
+
+`GITHUB_OWNER` restricts the relay to GitHub Actions runs in one organization. Every request must carry the workflow's `GITHUB_TOKEN`, which the relay validates against `https://api.github.com/repos/<claimed-repo>`. A token only authenticates for its own repository, so a success there proves the caller really is a workflow in that organization. Requests from anywhere else get `403`, and results are cached for 60 seconds so a job with many `oc` calls costs one GitHub API call.
+
+`oc` has no flag for custom headers, so it cannot present that token itself. The action starts `scripts/relay_shim.py` on loopback, which stamps the identity headers and forwards over TLS. The shim discards any identity headers supplied by the caller, so a workflow cannot claim to be a different repository.
+
+This gates the relay on your *organization*, not on this action specifically. GitHub issues no identity for a composite action, and this repository is public, so any check tied to the action's own code could be reproduced by copying it. Organization membership is the strongest claim that can actually be verified.
 
 ```yaml
 - uses: bcgov/action-oc-runner@X.Y.Z

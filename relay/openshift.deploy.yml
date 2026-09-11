@@ -7,6 +7,11 @@ parameters:
       Route hostname for this cluster's relay; must match the oc_relay input
       Example: oc-relay.apps.silver.devops.gov.bc.ca
     required: true
+  - name: GITHUB_OWNER
+    description: |
+      Only GitHub Actions runs in this organization may use the relay
+      Example: bcgov
+    required: true
 
   ### Recommended - suggest hard coding
   - name: APP
@@ -41,9 +46,21 @@ objects:
           uwsgi_temp_path /tmp/uwsgi;
           scgi_temp_path /tmp/scgi;
 
+          # Cluster DNS, needed to reach api.github.com; written at startup
+          include /tmp/resolver.conf;
+
+          # One GitHub API call per token, not per request
+          proxy_cache_path /tmp/authcache keys_zone=auth:1m max_size=8m inactive=5m;
+
           map $http_upgrade $connection_upgrade {
             default upgrade;
             ''      close;
+          }
+
+          # Cheap rejection before spending a GitHub API call
+          map $http_x_action_repository $repo_owner_ok {
+            default                                     0;
+            "~^${GITHUB_OWNER}/[A-Za-z0-9._-]+$"        1;
           }
 
           server {
@@ -53,7 +70,33 @@ objects:
               return 200 "ok\n";
             }
 
+            # Validates the caller's GitHub token against the repository it claims.
+            # A token only authenticates for its own repository, so a 200 here proves
+            # the request really came from a workflow in ${GITHUB_OWNER}.
+            location = /_auth {
+              internal;
+              proxy_pass https://api.github.com/repos/$http_x_action_repository;
+              proxy_method GET;
+              proxy_pass_request_body off;
+              proxy_set_header Content-Length "";
+              proxy_set_header Authorization "Bearer $http_x_action_token";
+              proxy_set_header Accept "application/vnd.github+json";
+              proxy_set_header User-Agent "action-oc-runner-relay";
+              proxy_set_header Host api.github.com;
+              proxy_ssl_server_name on;
+              proxy_ssl_name api.github.com;
+              proxy_cache auth;
+              proxy_cache_key "$http_x_action_repository:$http_x_action_token";
+              proxy_cache_valid 200 60s;
+              proxy_cache_valid 401 403 404 10s;
+            }
+
             location / {
+              if ($repo_owner_ok = 0) {
+                return 403 "relay: X-Action-Repository is not in ${GITHUB_OWNER}\n";
+              }
+              auth_request /_auth;
+
               proxy_pass https://kubernetes.default.svc:443;
               proxy_ssl_trusted_certificate /var/run/secrets/kubernetes.io/serviceaccount/ca.crt;
               proxy_ssl_verify on;
@@ -91,7 +134,14 @@ objects:
           containers:
             - name: ${APP}
               image: ${IMAGE}
-              command: ["nginx", "-c", "/etc/nginx-relay/nginx.conf", "-g", "daemon off;"]
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+                  NS=$(awk '/^nameserver/{print $2; exit}' /etc/resolv.conf)
+                  echo "resolver $NS ipv6=off valid=30s;" > /tmp/resolver.conf
+                  exec nginx -c /etc/nginx-relay/nginx.conf -g 'daemon off;'
               ports:
                 - containerPort: 8080
               readinessProbe:
