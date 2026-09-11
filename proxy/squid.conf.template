@@ -1,0 +1,34 @@
+# Squid as a CONNECT-only relay for the OpenShift API, giving runners a different
+# egress IP. Callers authenticate with the GITHUB_TOKEN of the workflow using them,
+# so no shared secret has to be distributed to calling repositories.
+#
+# TLS only. Basic auth sends credentials base64-encoded, not encrypted, so a
+# cleartext port would leak GitHub tokens to anyone on the path.
+https_port 3129 tls-cert=/etc/squid/tls/tls.crt tls-key=/etc/squid/tls/tls.key
+
+auth_param basic program /usr/local/bin/github_auth.sh
+auth_param basic children 8 startup=2 idle=1
+auth_param basic realm ${REALM}
+# Cache a verified token so a job with many oc calls costs one GitHub API call
+auth_param basic credentialsttl 30 minutes
+auth_param basic casesensitive on
+
+acl authenticated proxy_auth REQUIRED
+acl allowed_owner proxy_auth_regex ${OWNER_REGEX}
+acl api_hosts dstdomain ${API_HOSTS}
+acl api_port port 6443
+
+# Tunnel only. Anything that is not a CONNECT to a known API endpoint is refused,
+# so an authorized caller still cannot use this as a general-purpose proxy.
+http_access deny !authenticated
+http_access deny !allowed_owner
+http_access allow CONNECT api_hosts api_port
+http_access deny all
+
+cache deny all
+cache_mem 8 MB
+access_log stdio:/dev/stdout
+cache_log stdio:/dev/stderr
+coredump_dir /tmp
+pid_filename none
+shutdown_lifetime 5 seconds

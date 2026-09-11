@@ -1,0 +1,90 @@
+name: oc-runner
+
+on:
+  pull_request:
+    paths:
+      - proxy/**
+      - .github/workflows/oc-runner.yml
+  push:
+    branches: [main]
+    paths:
+      - proxy/**
+      - .github/workflows/oc-runner.yml
+  workflow_dispatch:
+
+concurrency:
+  group: oc-runner
+  cancel-in-progress: false
+
+permissions: {}
+
+env:
+  IMAGE_REPO: ghcr.io/bcgov/action-oc-runner/oc-runner
+  OC_NAMESPACE: 32d13a-prod
+  PROXY_HOST: oc-runner.apps.silver.devops.gov.bc.ca
+
+jobs:
+  test:
+    name: Test Proxy Gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash proxy/proxy_test.sh
+
+  publish:
+    name: Publish Image
+    needs: test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.push.outputs.image }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: push
+        env:
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          NAME="${IMAGE_REPO,,}"
+          if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+            TAG="pr-${{ github.event.number }}"
+          else
+            TAG="latest"
+          fi
+
+          podman build -t "${NAME}:${GITHUB_SHA}" -t "${NAME}:${TAG}" proxy
+          printf '%s' "${REGISTRY_TOKEN}" | podman login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
+          podman push "${NAME}:${GITHUB_SHA}"
+          podman push "${NAME}:${TAG}"
+
+          echo "image=${NAME}:${TAG}" >> "${GITHUB_OUTPUT}"
+          echo "Published ${NAME}:${TAG} (${GITHUB_SHA})" >> "${GITHUB_STEP_SUMMARY}"
+
+  deploy:
+    name: Deploy to prod
+    needs: publish
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./
+        with:
+          oc_namespace: ${{ env.OC_NAMESPACE }}
+          oc_server: ${{ vars.oc_server }}
+          oc_token: ${{ secrets.oc_token }}
+          commands: |
+            oc get secret oc-runner-tls
+            oc get secret ghcr
+            oc process -f proxy/openshift.deploy.yml \
+              -p HOST=${{ env.PROXY_HOST }} \
+              -p TLS_SECRET=oc-runner-tls \
+              -p IMAGE="${{ needs.publish.outputs.image }}" \
+              -p IMAGE_PULL_SECRET=ghcr \
+              -p OWNER_REGEX='^bcgov(-c)?/' | oc apply -f -
+            oc rollout status deploy/oc-runner --timeout=5m

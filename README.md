@@ -169,6 +169,12 @@ To handle transient network drops, cluster API restarts, or runner configuration
 - **Retry:** If the connection times out at the network layer (HTTP status `000`), hits a request timeout (`408`), gets rate-limited (`429`), or if the API returns a transient server error (HTTP status `5xx` during control-plane reboots), the action sleeps with exponential backoff (starting at 2 seconds) and retries up to `login_attempts` times.
 - **CLI Download Timeout:** Download of the `oc` CLI client archive from `mirror.openshift.com` is capped with a 15-second timeout and 3 retry attempts to prevent workflows from hanging indefinitely.
 
+# oc-runner proxy
+
+A CONNECT proxy for blocked GitHub runner IPs lives in `proxy/` and deploys to `32d13a-prod` on Silver. PRs and pushes to `main` that touch `proxy/` run `.github/workflows/oc-runner.yml`: test the gate, push `ghcr.io/bcgov/action-oc-runner/oc-runner`, then apply the template. PR images are tagged `pr-<number>`; `main` tags `latest`.
+
+The package starts private. Create a `ghcr` pull secret in `32d13a-prod` and a TLS secret `oc-runner-tls` whose certificate is valid for `oc-runner.apps.silver.devops.gov.bc.ca`. The deploy job fails fast if either is missing.
+
 # Troubleshooting
 
 The `commands` block runs in strict shell mode. A command failure (including optional `grep` misses in pipelines) can stop the step immediately.

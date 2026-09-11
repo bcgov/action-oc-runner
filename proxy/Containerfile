@@ -1,0 +1,15 @@
+FROM registry.access.redhat.com/ubi9/ubi:latest
+
+RUN dnf install -y squid gettext jq && dnf clean all
+
+COPY squid.conf.template /etc/squid/squid.conf.template
+COPY github_auth.sh /usr/local/bin/github_auth.sh
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+
+# OpenShift assigns an arbitrary UID in the root group
+RUN chmod 0755 /usr/local/bin/github_auth.sh /usr/local/bin/entrypoint.sh \
+ && chmod -R g=u /etc/squid /var/log/squid /var/spool/squid /run
+
+USER 1001
+EXPOSE 3129
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
