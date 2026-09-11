@@ -173,7 +173,7 @@ To handle transient network drops, cluster API restarts, or runner configuration
 
 GitHub-hosted runners are sometimes unable to reach the OpenShift API, failing login with `curl: (28)` timeouts while the same cluster answers normally from elsewhere. The address the runner happens to get is blocked upstream, and neither the workflow nor this action can choose a different one.
 
-`oc_proxy` tunnels API traffic through a CONNECT proxy, so the cluster sees the proxy's address instead of the runner's:
+When a `bcgov` or `bcgov-c` workflow talking to gold or silver hits a connection timeout, the action retries through `https://oc-proxy.apps.<cluster>.devops.gov.bc.ca`. Callers do not set this. Any other org, and any other cluster, stays on a direct connection.
 
 ```yaml
 - uses: bcgov/action-oc-runner@vX.Y.Z
@@ -181,17 +181,14 @@ GitHub-hosted runners are sometimes unable to reach the OpenShift API, failing l
     oc_namespace: ${{ vars.oc_namespace }}
     oc_server: ${{ vars.oc_server }}
     oc_token: ${{ secrets.oc_token }}
-    oc_proxy: https://oc-proxy.apps.silver.devops.gov.bc.ca
     commands: oc whoami
 ```
-
-The action only arms that proxy for workflows in `bcgov` or `bcgov-c` whose `oc_server` is gold or silver (`api.gold.devops.gov.bc.ca` or `api.silver.devops.gov.bc.ca`). Any other caller connects directly, including an unrelated org that copied `oc_proxy` from a sample, and including a bcgov workflow pointed at some other cluster.
 
 No new secret is needed. The action authenticates to the proxy with the calling workflow's `GITHUB_TOKEN`, passed as `owner/repo` plus token in the proxy URL.
 
 The proxy works out which repository a token belongs to rather than believing the name it was given. It asks `https://api.github.com/installation/repositories`, which reports the repositories a workflow token is scoped to, and accepts the request only if the claimed repository is among them. Checking `/repos/<claimed-repo>` instead would prove nothing, because every valid token can read any public repository, so that check would admit anyone with a GitHub account.
 
-This means `oc_proxy` needs the workflow's own `GITHUB_TOKEN`, which is the default. A personal access token is not an installation token and will be refused.
+This means the built-in proxy needs the workflow's own `GITHUB_TOKEN`, which is the default. A personal access token is not an installation token and will be refused. The `oc_proxy` input is only an override, for tests.
 
 Because it tunnels with `CONNECT`, TLS runs end-to-end between the runner and the cluster. **The proxy never sees your OpenShift token**, only encrypted bytes. It also refuses anything that is not a `CONNECT` to a declared API host on port 6443, so an authorized caller cannot use it as a general-purpose proxy.
 

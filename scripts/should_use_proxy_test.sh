@@ -7,25 +7,37 @@ DECIDE="${ROOT}/scripts/should_use_proxy.sh"
 
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
-check() { # expect_rc repo server proxy label
-  local got rc=0
-  got="$(GITHUB_REPOSITORY="$2" OC_SERVER="$3" OC_PROXY="$4" bash "${DECIDE}" 2>&1)" || rc=$?
-  [ "${rc}" -eq "$1" ] || fail "$5: expected rc $1, got ${rc} (${got})"
+# expect_rc expect_stdout repo server proxy label
+check() {
+  local rc=0 out
+  out="$(GITHUB_REPOSITORY="$3" OC_SERVER="$4" OC_PROXY="$5" bash "${DECIDE}" 2>/dev/null)" || rc=$?
+  [ "${rc}" -eq "$1" ] || fail "$6: expected rc $1, got ${rc}"
+  [ "${out}" = "$2" ] || fail "$6: expected '${2}', got '${out}'"
 }
 
-check 0 "bcgov/action-oc-runner" "https://api.gold.devops.gov.bc.ca:6443" "https://oc-proxy.example" \
-  "bcgov on gold"
-check 0 "bcgov-c/something" "https://api.silver.devops.gov.bc.ca:6443" "https://oc-proxy.example" \
-  "bcgov-c on silver"
-check 1 "bcgov/action-oc-runner" "https://api.gold.devops.gov.bc.ca:6443" "" \
-  "empty oc_proxy"
-check 1 "otherorg/app" "https://api.gold.devops.gov.bc.ca:6443" "https://oc-proxy.example" \
-  "unrelated org on gold"
-check 1 "bcgov/action-oc-runner" "https://api.example.com:6443" "https://oc-proxy.example" \
+check 0 "https://oc-proxy.apps.gold.devops.gov.bc.ca" \
+  "bcgov/action-oc-runner" "https://api.gold.devops.gov.bc.ca:6443" "" \
+  "bcgov on gold uses the gold default"
+check 0 "https://oc-proxy.apps.silver.devops.gov.bc.ca" \
+  "bcgov-c/something" "https://api.silver.devops.gov.bc.ca:6443" "" \
+  "bcgov-c on silver uses the silver default"
+check 0 "https://localhost:3129" \
+  "bcgov/action-oc-runner" "https://api.gold.devops.gov.bc.ca:6443" "https://localhost:3129" \
+  "override wins for CI"
+check 1 "" \
+  "otherorg/app" "https://api.gold.devops.gov.bc.ca:6443" "" \
+  "unrelated org skips even with the default"
+check 1 "" \
+  "otherorg/app" "https://api.gold.devops.gov.bc.ca:6443" "https://oc-proxy.example" \
+  "unrelated org skips even with an override"
+check 1 "" \
+  "bcgov/action-oc-runner" "https://api.example.com:6443" "" \
   "bcgov on someone else's cluster"
-check 1 "bcgov/action-oc-runner" "https://api.gold.evil.example:6443" "https://oc-proxy.example" \
+check 1 "" \
+  "bcgov/action-oc-runner" "https://api.gold.evil.example:6443" "" \
   "lookalike gold host"
-check 1 "bcgov-extra/app" "https://api.gold.devops.gov.bc.ca:6443" "https://oc-proxy.example" \
+check 1 "" \
+  "bcgov-extra/app" "https://api.gold.devops.gov.bc.ca:6443" "" \
   "owner prefix must not match"
 
 echo "should_use_proxy_test.sh: ok"
