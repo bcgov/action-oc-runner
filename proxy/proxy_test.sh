@@ -104,6 +104,19 @@ code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 -k \
 [ "${code}" = "200" ] && fail "an unauthenticated caller must not tunnel"
 echo "  no credentials at all               -> ${code:-blocked}"
 
+code=$(try 'bcgov%2Faction-oc-runner' goodtoken 'fake-api.test:443')
+[ "${code}" = "200" ] && fail "only port 6443 may be tunnelled to"
+echo "  allowed caller, wrong port          -> ${code:-blocked}"
+
+# Plain http:// through a proxy is a GET with an absolute URI, not a CONNECT.
+# Allowing it would make this an open proxy for anyone inside the allowed owners.
+code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 \
+  --proxy "https://bcgov%2Faction-oc-runner:goodtoken@localhost:3129" \
+  --proxy-cacert /etc/squid/tls/tls.crt \
+  "http://fake-github.test:8080/repos/bcgov/action-oc-runner" 2>/dev/null)
+[ "${code}" = "200" ] && fail "a non-CONNECT request must be refused; this would be an open proxy"
+echo "  allowed caller, plain GET (no CONNECT) -> ${code:-blocked}"
+
 # A blocked request proves little on its own, so confirm squid refused for the
 # stated reason. attacker/evil passes the token helper here, because the fake
 # GitHub accepts any repository; only the owner ACL can be rejecting it.

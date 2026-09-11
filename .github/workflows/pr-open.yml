@@ -56,6 +56,26 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # TEMPORARY: establish how a workflow token can be tied to its own repository.
+      # Prints status codes and public repository names only.
+      - name: Diagnose token validation endpoints
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          probe() {
+            printf '  %-34s %s\n' "$1" \
+              "$(curl -sS -o /tmp/body.json -w '%{http_code}' --max-time 15 \
+                 -H "Authorization: Bearer ${TOKEN}" \
+                 -H "Accept: application/vnd.github+json" \
+                 -H "User-Agent: diag" "https://api.github.com$1")"
+          }
+          probe "/installation/repositories"
+          echo "    repos in token scope: $(jq -r '[.repositories[]?.full_name] | join(",")' /tmp/body.json 2>/dev/null || echo 'n/a')"
+          probe "/repos/${GITHUB_REPOSITORY}"
+          probe "/repos/actions/checkout"
+          echo "  (a 200 on the last line would confirm any valid token passes the current check)"
+
       - name: Run the proxy on this runner
         run: |
           set -euo pipefail
