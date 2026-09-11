@@ -100,6 +100,8 @@ inputs:
       authenticates callers with this workflow's GITHUB_TOKEN, so no extra secret is
       needed, and TLS stays end-to-end, so the proxy never sees your OpenShift token.
       Needs the default github_token; a personal access token is refused.
+      Only used for bcgov and bcgov-c workflows talking to gold or silver;
+      every other caller connects directly even if this is set.
       Empty (default) connects directly. See proxy/ to run one.
       Example: https://oc-proxy.example.com:3129
     default: ""
@@ -188,37 +190,29 @@ runs:
           rm -f oc.tar.gz
         fi
 
-        # Tunnel API traffic through the CONNECT proxy when one is configured. The
-        # proxy authenticates callers with this workflow's GITHUB_TOKEN, so the
-        # credential travels in the proxy URL; oc and curl both send it on CONNECT.
-        # Set after the CLI download so fetching oc is never proxied.
+        # Prepare the proxy but do not use it yet. Most runners reach the API
+        # directly, and a connection timeout is what a blocked runner address
+        # looks like, so the switch happens in the retry loop below. Built after
+        # the CLI download so fetching oc is never proxied.
         OC_PROXY="${{ inputs.oc_proxy }}"
+        PROXY_URL=""
+        PROXY_ACTIVE=""
         if [ -n "${OC_PROXY}" ]; then
           if [[ ! "${OC_PROXY}" =~ ^https?://[A-Za-z0-9._-]+(:[0-9]{1,5})?$ ]]; then
             echo "::error::Invalid oc_proxy '${OC_PROXY}'. Use http(s)://host[:port], with no credentials, path or query."
             exit 1
           fi
-          if [ -z "${ACTION_GITHUB_TOKEN}" ]; then
-            echo "::error::oc_proxy needs github_token to authenticate to the proxy."
-            exit 1
+          # Unrelated orgs and non-gold/silver clusters stay on a direct path,
+          # even if they copied oc_proxy from a sample workflow.
+          if OC_SERVER="${SERVER_URL}" OC_PROXY="${OC_PROXY}" \
+              "${GITHUB_ACTION_PATH}/scripts/should_use_proxy.sh"; then
+            if [ -z "${ACTION_GITHUB_TOKEN}" ]; then
+              echo "::error::oc_proxy needs github_token to authenticate to the proxy."
+              exit 1
+            fi
+            PROXY_URL="${OC_PROXY%%://*}://${GITHUB_REPOSITORY//\//%2F}:${ACTION_GITHUB_TOKEN}@${OC_PROXY#*://}"
+            echo "::add-mask::${PROXY_URL}"
           fi
-          PROXY_URL="${OC_PROXY%%://*}://${GITHUB_REPOSITORY//\//%2F}:${ACTION_GITHUB_TOKEN}@${OC_PROXY#*://}"
-          echo "::add-mask::${PROXY_URL}"
-          NO_PROXY_LIST="localhost,127.0.0.1,github.com,.github.com,api.github.com,githubusercontent.com,.githubusercontent.com,ghcr.io,mirror.openshift.com"
-
-          export HTTPS_PROXY="${PROXY_URL}" https_proxy="${PROXY_URL}"
-          export NO_PROXY="${NO_PROXY_LIST}" no_proxy="${NO_PROXY_LIST}"
-
-          # Later steps run after a checkout that can replace this action's files,
-          # so hand the settings over through the environment instead of re-deriving.
-          {
-            echo "HTTPS_PROXY=${PROXY_URL}"
-            echo "https_proxy=${PROXY_URL}"
-            echo "NO_PROXY=${NO_PROXY_LIST}"
-            echo "no_proxy=${NO_PROXY_LIST}"
-          } >> "${GITHUB_ENV}"
-
-          echo "OpenShift API traffic will tunnel through ${OC_PROXY}"
         fi
 
         # OpenShift login with smart retry
@@ -265,6 +259,28 @@ runs:
             echo "Transient connection or server error (HTTP $HTTP_CODE). Retrying..."
             if [ -n "$CURL_ERR" ]; then
               echo "Curl error: $CURL_ERR"
+            fi
+
+            # HTTP 000 means the connection never completed, which is how a blocked
+            # runner address presents. Switch to the proxy for the remaining
+            # attempts so a working runner never depends on the proxy being up.
+            if [ "$HTTP_CODE" = "000" ] && [ -n "${PROXY_URL}" ] && [ -z "${PROXY_ACTIVE}" ]; then
+              PROXY_ACTIVE=1
+              NO_PROXY_LIST="localhost,127.0.0.1,github.com,.github.com,api.github.com,githubusercontent.com,.githubusercontent.com,ghcr.io,mirror.openshift.com"
+
+              export HTTPS_PROXY="${PROXY_URL}" https_proxy="${PROXY_URL}"
+              export NO_PROXY="${NO_PROXY_LIST}" no_proxy="${NO_PROXY_LIST}"
+
+              # Later steps run after a checkout that can replace this action's
+              # files, so hand the settings over through the environment.
+              {
+                echo "HTTPS_PROXY=${PROXY_URL}"
+                echo "https_proxy=${PROXY_URL}"
+                echo "NO_PROXY=${NO_PROXY_LIST}"
+                echo "no_proxy=${NO_PROXY_LIST}"
+              } >> "${GITHUB_ENV}"
+
+              echo "Direct connection timed out; retrying through ${OC_PROXY}"
             fi
           # Fail-fast path: client configuration/authorization errors (401, 403, 404, etc.)
           else

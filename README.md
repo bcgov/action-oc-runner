@@ -185,6 +185,8 @@ GitHub-hosted runners are sometimes unable to reach the OpenShift API, failing l
     commands: oc whoami
 ```
 
+The action only arms that proxy for workflows in `bcgov` or `bcgov-c` whose `oc_server` is gold or silver (`api.gold.devops.gov.bc.ca` or `api.silver.devops.gov.bc.ca`). Any other caller connects directly, including an unrelated org that copied `oc_proxy` from a sample, and including a bcgov workflow pointed at some other cluster.
+
 No new secret is needed. The action authenticates to the proxy with the calling workflow's `GITHUB_TOKEN`, passed as `owner/repo` plus token in the proxy URL.
 
 The proxy works out which repository a token belongs to rather than believing the name it was given. It asks `https://api.github.com/installation/repositories`, which reports the repositories a workflow token is scoped to, and accepts the request only if the claimed repository is among them. Checking `/repos/<claimed-repo>` instead would prove nothing, because every valid token can read any public repository, so that check would admit anyone with a GitHub account.
@@ -205,7 +207,7 @@ oc process -f proxy/openshift.deploy.yml \
   -p OWNER_REGEX='^bcgov(-c)?/' | oc apply -f -
 ```
 
-`OWNER_REGEX` decides who may use it and `API_HOSTS` decides which clusters it will reach; both are parameters, so this works for other organizations and clusters. The Route is passthrough because squid terminates TLS itself, which it must: proxy credentials are base64-encoded rather than encrypted, so a cleartext port would expose `GITHUB_TOKEN`s.
+`OWNER_REGEX` and `API_HOSTS` are how the *deployed proxy* decides who it will tunnel. The action has a separate, stricter gate: it never sends traffic there unless the caller is `bcgov` or `bcgov-c` and the target is gold or silver. The Route is passthrough because squid terminates TLS itself, which it must: proxy credentials are base64-encoded rather than encrypted, so a cleartext port would expose `GITHUB_TOKEN`s.
 
 Host it wherever is reachable. In-cluster keeps it under your control; anywhere with a stable address also works, and the proxy's blindness to OpenShift tokens is what makes that acceptable.
 
