@@ -103,13 +103,15 @@ inputs:
       Example: https://oc-relay.apps.{domain}
     default: ""
     pattern: '^$|^https://[A-Za-z0-9._{}-]+$'
-  https_proxy:
+  proxy:
     description: |
-      HTTP CONNECT proxy for OpenShift API traffic (curl and oc). No credentials.
+      Send OpenShift API traffic (curl and oc) through a proxy, changing the egress IP
+      that the cluster sees. Use 'tor' to install and use Tor on the runner itself, which
+      is free and needs no infrastructure, or give a proxy URL. No credentials.
       Empty (default) keeps direct egress. GitHub and mirror.openshift.com stay direct.
-      Example: http://oc-proxy.example:3128
+      Example: tor, http://oc-proxy.example:3128, socks5://oc-proxy.example:1080
     default: ""
-    pattern: '^$|^https?://[A-Za-z0-9._-]+(:[0-9]{1,5})?$'
+    pattern: '^$|^tor$|^(https?|socks5)://[A-Za-z0-9._-]+(:[0-9]{1,5})?$'
 
 outputs:
   commands:
@@ -146,7 +148,7 @@ runs:
     - if: steps.diff.outputs.triggered == 'true'
       env:
         OC: ${{ format('stable-{0}', inputs.oc_version) }}
-        ACTION_HTTPS_PROXY: ${{ inputs.https_proxy }}
+        ACTION_PROXY: ${{ inputs.proxy }}
       shell: bash
       working-directory: /usr/local/bin
       run: |
@@ -211,7 +213,7 @@ runs:
           
           # Fetch token response with HTTP code directly to memory
           ERR_FILE=$(mktemp)
-          RESPONSE=$(curl -ksS -4 --connect-timeout 10 --max-time 30 -w "%{http_code}" -X POST "${SA_TOKEN_URL}" \
+          RESPONSE=$(curl -sS -4 --connect-timeout 10 --max-time 30 -w "%{http_code}" -X POST "${SA_TOKEN_URL}" \
             --header "Authorization: Bearer ${TOKEN_INPUT}" \
             --header "Content-Type: application/json; charset=utf-8" \
             --data '{"spec": {"expirationSeconds": 1500 }}' 2>"$ERR_FILE") || true

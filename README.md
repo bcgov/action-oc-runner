@@ -74,8 +74,9 @@ Provide as few as zero commands to login only.  There is a separate parameter fo
     # '{domain}' and '{cluster}' come from oc_server; see relay/openshift.deploy.yml
     oc_relay: https://oc-relay.apps.{domain}
 
-    # HTTP CONNECT proxy for OpenShift API traffic only (curl/oc). No credentials.
-    https_proxy: ''
+    # Send API traffic through a proxy to change the egress IP the cluster sees.
+    # 'tor' installs Tor on the runner; or give an http(s):// or socks5:// URL.
+    proxy: ''
 ```
 
 # Example: Login only
@@ -210,13 +211,25 @@ Callers keep passing the `oc_server` they already pass. Use a plain hostname wit
 
 **Rolling this out to many repositories:** set the `oc_relay` default in `action.yml` and tag a release. Dependents that never pass `oc_relay` pick it up on their next Renovate bump, with no change to their workflow files. The default ships empty, so nothing routes through a relay until you deploy one and set it.
 
-## HTTP CONNECT proxy (alternative)
+## Changing the egress IP with no infrastructure
 
-If you already operate a jumphost outside the cluster, `https_proxy` sends `curl` and `oc` through it instead. No credentials are accepted in the URL; GitHub and `mirror.openshift.com` stay direct. Prefer the relay: a public CONNECT proxy that can reach an API server is worth locking down carefully, while the relay can only ever speak to its own cluster.
+If you do not want to run a relay, `proxy: tor` installs and starts Tor on the runner and sends `curl` and `oc` through it. The cluster then sees a Tor exit address instead of the blocked runner IP. It is free, needs nothing deployed, and costs roughly 30 seconds of setup per job.
 
 ```yaml
-    https_proxy: http://oc-proxy.example:3128
+- uses: bcgov/action-oc-runner@X.Y.Z
+  with:
+    oc_namespace: ${{ vars.oc_namespace }}
+    oc_server: ${{ vars.oc_server }}
+    oc_token: ${{ secrets.OC_TOKEN }}
+    proxy: tor
+    commands: oc whoami
 ```
+
+`proxy` also takes a URL if you have your own hop, for example `http://oc-proxy.example:3128` or `socks5://oc-proxy.example:1080`. Credentials in the URL are rejected, and GitHub and `mirror.openshift.com` always stay direct.
+
+**The proxy is untrusted by design.** TLS runs end to end between the runner and the cluster API, so a proxy operator sees only ciphertext and the hostname, never your OpenShift token. This holds only because the token request validates the API certificate; do not reintroduce `curl -k`, which would let any proxy present its own certificate and read the token in plain text.
+
+Two caveats worth testing before you rely on Tor: many government networks block Tor exit addresses outright, so this may trade one block for another, and exit IPs change per circuit, so it cannot be combined with an allowlist.
 
 # OpenShift Login Retry and Fail-Fast Behavior
 

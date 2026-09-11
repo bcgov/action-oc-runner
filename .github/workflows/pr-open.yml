@@ -76,7 +76,7 @@ jobs:
           commands: |
             oc whoami
             echo "whoami-proxy-ok" >> "$GITHUB_OUTPUT"
-          https_proxy: http://127.0.0.1:8888
+          proxy: http://127.0.0.1:8888
           oc_namespace: ${{ vars.oc_namespace }}
           oc_server: ${{ vars.oc_server }}
           oc_token: ${{ secrets.oc_token }}
@@ -96,6 +96,29 @@ jobs:
           if ! grep -q ':6443$' "${RUNNER_TEMP}/connect-proxy.log"; then
             echo "Error: CONNECT proxy log has no :6443 hop."
             cat "${RUNNER_TEMP}/connect-proxy.log"
+            exit 1
+          fi
+
+  tor-egress:
+    name: Test Tor Changes Egress IP
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Compare direct and Tor egress addresses
+        run: |
+          set -euo pipefail
+          DIRECT=$(curl -sS --max-time 20 https://api.ipify.org)
+          echo "Runner egress IP: ${DIRECT}"
+
+          PROXY=$(bash scripts/start_tor.sh)
+          echo "Tor proxy: ${PROXY}"
+
+          VIA_TOR=$(curl -sS --max-time 30 --proxy "${PROXY}" https://api.ipify.org)
+          echo "Tor exit IP:      ${VIA_TOR}"
+
+          if [ "${DIRECT}" = "${VIA_TOR}" ]; then
+            echo "Error: Tor did not change the egress IP."
             exit 1
           fi
 
@@ -237,7 +260,7 @@ jobs:
   # ==========================================================================
   results:
     name: PR Results
-    needs: [whoami, proxy-env, whoami-proxy, repository, legacy, cronjob, test-failures]
+    needs: [whoami, proxy-env, whoami-proxy, tor-egress, repository, legacy, cronjob, test-failures]
     if: always()
     runs-on: ubuntu-24.04
     timeout-minutes: 1
