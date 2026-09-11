@@ -101,8 +101,8 @@ inputs:
       needed, and TLS stays end-to-end, so the proxy never sees your OpenShift token.
       Needs the default github_token; a personal access token is refused.
       Override the built-in proxy host. Leave empty (default): bcgov and bcgov-c
-      workflows talking to gold or silver use oc-proxy.apps.<cluster>.devops.gov.bc.ca
-      after a direct connection times out. Every other caller connects directly.
+      workflows talking to gold or silver use the Silver proxy after a direct
+      connection times out. Every other caller connects directly.
       Example: https://localhost:3129
     default: ""
     pattern: '^$|^https?://[A-Za-z0-9._-]+(:[0-9]{1,5})?$'
@@ -191,7 +191,7 @@ runs:
         fi
 
         # Arm a proxy URL only for bcgov/bcgov-c on gold or silver. Empty
-        # oc_proxy means the per-cluster default; callers do not set this.
+        # oc_proxy means the Silver proxy; callers do not set this.
         # The URL is not used until a direct attempt times out.
         OC_PROXY_INPUT="${{ inputs.oc_proxy }}"
         PROXY_URL=""

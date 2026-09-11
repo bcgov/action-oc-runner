@@ -173,7 +173,7 @@ To handle transient network drops, cluster API restarts, or runner configuration
 
 GitHub-hosted runners are sometimes unable to reach the OpenShift API, failing login with `curl: (28)` timeouts while the same cluster answers normally from elsewhere. The address the runner happens to get is blocked upstream, and neither the workflow nor this action can choose a different one.
 
-When a `bcgov` or `bcgov-c` workflow talking to gold or silver hits a connection timeout, the action retries through `https://oc-proxy.apps.<cluster>.devops.gov.bc.ca`. Callers do not set this. Any other org, and any other cluster, stays on a direct connection.
+When a `bcgov` or `bcgov-c` workflow talking to gold or silver hits a connection timeout, the action retries through `https://oc-proxy.apps.silver.devops.gov.bc.ca`. That one proxy, in Silver, tunnels to either API. Callers do not set this. Any other org, and any other cluster, stays on a direct connection.
 
 ```yaml
 - uses: bcgov/action-oc-runner@vX.Y.Z

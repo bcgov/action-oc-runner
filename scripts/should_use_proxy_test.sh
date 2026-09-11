@@ -15,12 +15,12 @@ check() {
   [ "${out}" = "$2" ] || fail "$6: expected '${2}', got '${out}'"
 }
 
-check 0 "https://oc-proxy.apps.gold.devops.gov.bc.ca" \
+check 0 "https://oc-proxy.apps.silver.devops.gov.bc.ca" \
   "bcgov/action-oc-runner" "https://api.gold.devops.gov.bc.ca:6443" "" \
-  "bcgov on gold uses the gold default"
+  "bcgov on gold uses the Silver proxy"
 check 0 "https://oc-proxy.apps.silver.devops.gov.bc.ca" \
   "bcgov-c/something" "https://api.silver.devops.gov.bc.ca:6443" "" \
-  "bcgov-c on silver uses the silver default"
+  "bcgov-c on silver uses the same proxy"
 check 0 "https://localhost:3129" \
   "bcgov/action-oc-runner" "https://api.gold.devops.gov.bc.ca:6443" "https://localhost:3129" \
   "override wins for CI"
