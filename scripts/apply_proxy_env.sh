@@ -15,5 +15,16 @@ if [ -n "${ACTION_HTTPS_PROXY:-}" ]; then
   export https_proxy="${ACTION_HTTPS_PROXY}"
   export NO_PROXY="localhost,127.0.0.1,github.com,.github.com,api.github.com,githubusercontent.com,.githubusercontent.com,ghcr.io,mirror.openshift.com"
   export no_proxy="${NO_PROXY}"
+
+  # Hand the settings to later steps. This file lives beside action.yml, which a
+  # non-default 'repository' checkout replaces in the workspace, so it cannot be
+  # sourced again once the commands step runs.
+  if [ -n "${GITHUB_ENV:-}" ]; then
+    for _var in HTTP_PROXY HTTPS_PROXY http_proxy https_proxy NO_PROXY no_proxy; do
+      echo "${_var}=${!_var}" >> "${GITHUB_ENV}"
+    done
+    unset _var
+  fi
+
   echo "OpenShift API traffic will use HTTP CONNECT proxy ${ACTION_HTTPS_PROXY}"
 fi

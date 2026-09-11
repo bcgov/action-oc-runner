@@ -281,13 +281,9 @@ runs:
 
     - if: steps.diff.outputs.triggered == 'true' && inputs.commands
       id: commands
-      env:
-        ACTION_HTTPS_PROXY: ${{ inputs.https_proxy }}
       shell: bash
       run: |
         set -eEuo pipefail
-        # shellcheck source=scripts/apply_proxy_env.sh
-        source "${GITHUB_ACTION_PATH}/scripts/apply_proxy_env.sh" || exit 1
         ACTION_SOURCE="bcgov/action-oc-runner"
 
         on_commands_error() {
@@ -374,11 +370,7 @@ runs:
 
     - if: steps.diff.outputs.triggered == 'true' && inputs.cronjob
       id: cronjob
-      env:
-        ACTION_HTTPS_PROXY: ${{ inputs.https_proxy }}
       shell: bash
       run: |
-        # shellcheck source=scripts/apply_proxy_env.sh
-        source "${GITHUB_ACTION_PATH}/scripts/apply_proxy_env.sh" || exit 1
         # Run the cronjob script
         ./scripts/run_cronjob.sh "${{ inputs.cronjob }}" "${{ inputs.timeout }}" "${{ inputs.cronjob_tail }}"

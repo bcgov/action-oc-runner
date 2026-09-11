@@ -20,6 +20,16 @@ source "${APPLY}"
 [[ "${NO_PROXY}" == *github.com* ]] || fail "NO_PROXY must include github.com"
 [[ "${NO_PROXY}" == *mirror.openshift.com* ]] || fail "NO_PROXY must include mirror.openshift.com"
 
+ENV_FILE="$(mktemp)"
+trap 'rm -f "${ENV_FILE}"' EXIT
+GITHUB_ENV="${ENV_FILE}"
+ACTION_HTTPS_PROXY="http://127.0.0.1:8888"
+# shellcheck source=scripts/apply_proxy_env.sh
+source "${APPLY}"
+grep -qx "HTTPS_PROXY=http://127.0.0.1:8888" "${ENV_FILE}" || fail "GITHUB_ENV must carry HTTPS_PROXY to later steps"
+grep -q "^NO_PROXY=.*mirror.openshift.com" "${ENV_FILE}" || fail "GITHUB_ENV must carry NO_PROXY to later steps"
+unset GITHUB_ENV
+
 ACTION_HTTPS_PROXY="http://user:pass@evil:3128"
 if source "${APPLY}"; then
   fail "proxy with credentials must be rejected"
