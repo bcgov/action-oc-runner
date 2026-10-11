@@ -10,6 +10,21 @@
 
 # OpenShift CLI (oc) Login and Runner
 
+> [!IMPORTANT]
+> **This action has moved to [`bcgov/actions-openshift/oc-runner`](https://github.com/bcgov/actions-openshift/tree/main/oc-runner).** This repository is retiring and will be archived. Update workflows to the new path, pinned to a [release](https://github.com/bcgov/actions-openshift/releases) (not `@main`):
+>
+> ```yaml
+> - uses: bcgov/actions-openshift/oc-runner@vX.Y.Z
+>   with:
+>     oc_namespace: ${{ secrets.OC_NAMESPACE }}
+>     oc_token: ${{ secrets.OC_TOKEN }}
+>     oc_server: ${{ vars.OC_SERVER }}
+>     commands: |
+>       oc get pods
+> ```
+>
+> Inputs are unchanged.
+
 Action for running oc commands. Intended for use with the BC Government's OpenShift cluster.  We will do our best to keep the default oc runner version lined up with whatever the platform team currently has deployed to production.
 
 Provide as few as zero commands to login only.  There is a separate parameter for cronjobs, with the ability to report success or failure.

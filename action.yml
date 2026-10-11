@@ -112,6 +112,10 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: Migration Warning
+      shell: bash
+      run: echo "::warning title=Action moved::This action has moved to bcgov/actions-openshift/oc-runner. Update your workflow to use bcgov/actions-openshift/oc-runner pinned to a release."
+
     # Send triggers to diff action
     - id: diff
       uses: bcgov/action-diff-triggers@a80e4b3cf77b7e05f84e74030e3bfa08b717a574 # v1.2.1
