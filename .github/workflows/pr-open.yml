@@ -12,7 +12,7 @@ permissions: {}
 jobs:
   whoami:
     name: Test Command
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
       - id: whoami
@@ -44,7 +44,7 @@ jobs:
   repository:
     name: Test Non-Default Repository
     needs: whoami
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
 
@@ -80,7 +80,7 @@ jobs:
   legacy:
     name: Test Legacy Binary
     needs: repository
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
       - uses: ./
@@ -96,7 +96,7 @@ jobs:
   cronjob:
     name: Test CronJob
     needs: legacy
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
       - id: cronjob
@@ -123,7 +123,7 @@ jobs:
   test-failures:
     name: Test Failure Scenarios
     needs: cronjob
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
@@ -181,7 +181,7 @@ jobs:
     name: PR Results
     needs: [whoami, repository, legacy, cronjob, test-failures]
     if: always()
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 1
     steps:
       - name: Log Job Results Context
